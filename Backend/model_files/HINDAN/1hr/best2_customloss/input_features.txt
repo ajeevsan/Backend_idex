@@ -1,0 +1,1 @@
+imp_features = ['TTT', 'RH', 'FF', 'N', 'MAX', 'FMFM_bin', 'RRR_bin', 'MIN', 'QFF', 'QFE','VV']
