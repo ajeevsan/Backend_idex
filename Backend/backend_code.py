@@ -860,6 +860,108 @@ def sendToFrontendhttp(stn, selectedDate, fchr, isPast):
         ErrPAEvalues6 = []
         statusArray = []
         
+        global min_error, max_error, mean_average
+        
+        #! Fetching the data for the average, absolute mean error
+        if fchr == '6hr':
+            # Fetching the min error value in the given table
+            getMinValues = 'SELECT "pred(t-0.5)" AS Prediction, "actual(t)" AS Actual ' + \
+            'FROM (SELECT "pred(t-0.5)", "actual(t)" ' + \
+            'FROM ' + stn + '_PAE_6HR' +' WHERE "error(t-0.5)" = (SELECT MIN("error(t-0.5)") FROM '+ stn +  '_PAE_6HR' +') ' + \
+            'ORDER BY rownum) WHERE rownum = 1'
+            cursor.execute(getMinValues)
+            allMinValues= cursor.fetchall()   
+            min_err1, min_err2 = allMinValues[0]
+            min_error = int(abs(min_err1-min_err2))
+            print('allMinValues_______',min_error)
+                        
+            # Fetching the max error value in the given table
+            getMaxValues = 'SELECT "pred(t-0.5)" AS Prediction, "actual(t)" AS Actual ' + \
+            'FROM (SELECT "pred(t-0.5)", "actual(t)" ' + \
+            'FROM ' + stn +  '_PAE_6HR' +' WHERE "error(t-0.5)" = (SELECT MAX("error(t-0.5)") FROM '+ stn +  '_PAE_6HR' +  ') ' + \
+            'ORDER BY rownum) WHERE rownum = 1'
+            cursor.execute(getMaxValues)
+            allMaxValues=cursor.fetchall()
+            max_err1, max_err2 = allMaxValues[0]
+            max_error = int(abs(max_err1-max_err2))
+            
+            # Average mean error
+            dataForAvgMeanError = 'SELECT "pred(t-0.5)" AS Prediction, "actual(t)" AS Actual ' +\
+                                  'FROM (SELECT * FROM ' + stn +  '_PAE_6HR ' +\
+                                        'WHERE "actual(t)" IS NOT NULL '+\
+                                        'ORDER BY datetime DESC) WHERE ROWNUM <=12'
+            cursor.execute(dataForAvgMeanError)
+            allValuesForMeanError = cursor.fetchall()
+            print("allValuesForMeanError_______",allValuesForMeanError)
+
+            value1 = [int(x[0]) for x in allValuesForMeanError]
+            value2 = [int(x[1]) for x in allValuesForMeanError]
+
+            print('meanAvgError1______',value1)
+            print('meanAvgError2______',value2)
+            
+            mainList = []
+
+            # Getting the absolute difference of prediction and actual
+            for i in range(len(value1)):
+                mainList.append(abs(value1[i]-value2[i]))
+            
+            absolute_values = [abs(x) for x in mainList]  # Calculate the absolute values
+            sum_absolute_values = sum(absolute_values)  # Find the sum of absolute values
+            mean_average = sum_absolute_values / len(mainList)  # Calculate the mean average
+
+            print("Total absolute mean average:", mean_average)
+                            
+                        
+        elif fchr == '48hr':
+            # Fetching the min error value in the given table
+            getMinValues = 'SELECT "pred(t-2)" AS Prediction, "actual(t)" AS Actual ' + \
+            'FROM (SELECT "pred(t-2)", "actual(t)" ' + \
+            'FROM ' + stn +  '_PAE_48HR' + ' WHERE "error(t-2)" = (SELECT MIN("error(t-2)") FROM ' + stn +  '_PAE_48HR' +') ' + \
+            'ORDER BY rownum) WHERE rownum = 1'
+            cursor.execute(getMinValues)
+            allMinValues= cursor.fetchall()   
+            print('allMinValues_______',allMinValues)
+            min_err1, min_err2 = allMinValues[0]
+            min_error = int(abs(min_err1-min_err2))
+               
+            # Fetching the max error value in the given table             
+            getMaxValues = 'SELECT "pred(t-2)" AS Prediction, "actual(t)" AS Actual ' + \
+            'FROM (SELECT "pred(t-2)", "actual(t)" ' + \
+            'FROM ' + stn +  '_PAE_48HR' +' WHERE "error(t-2)" = (SELECT MAX("error(t-2)") FROM ' + stn +  '_PAE_48HR' +') ' + \
+            'ORDER BY rownum) WHERE rownum = 1'
+            cursor.execute(getMaxValues)
+            allMaxValues = cursor.fetchall()
+            print("allMaxValues______",allMaxValues)
+            max_err1, max_err2 = allMaxValues[0]
+            max_error = int(abs(max_err1-max_err2))
+            
+            # Average mean error
+            dataForAvgMeanError =   'SELECT "pred(t-2)" AS Prediction, "actual(t)" AS Actual ' +\
+                                    'FROM (SELECT * FROM ' + stn +  '_PAE_48HR ' +\
+                                    'WHERE "actual(t)" IS NOT NULL '+\
+                                    'ORDER BY datetime DESC) WHERE ROWNUM <=24'
+            cursor.execute(dataForAvgMeanError)
+            allValuesForMeanError = cursor.fetchall()
+            print("allValuesForMeanError_______",allValuesForMeanError)
+            value1 = [int(x[0]) for x in allValuesForMeanError]
+            value2 = [int(x[1]) for x in allValuesForMeanError]
+            
+            print('meanAvgError1______',value1)
+            print('meanAvgError2______',value2)
+            
+            mainList = []
+
+            # Getting the absolute difference of prediction and actual
+            for i in range(len(value1)):
+                mainList.append(abs(value1[i]-value2[i]))
+            
+            absolute_values = [abs(x) for x in mainList]  # Calculate the absolute values
+            sum_absolute_values = sum(absolute_values)  # Find the sum of absolute values
+            mean_average = sum_absolute_values / len(mainList)  # Calculate the mean average
+
+            print("Total absolute mean average:", mean_average)
+        
         #! Fetching the data for status
         allStatus_Data = []
         stn_name_list = [x.replace(" ", '') for x in config.get('stnTableName', 'list').split(',')]
@@ -942,15 +1044,28 @@ def sendToFrontendhttp(stn, selectedDate, fchr, isPast):
 
         statusColor_48hr = ['green','green','green','green']
 
+        print('pred_6hr_list_____',pred_6hr_list)
+        print('pred_48hr_list_____',pred_48hr_list)
+        
+        
+        print('Length of pred_6hr_list*********',len(pred_6hr_list[0]))
+        print('Length of pred_48hr_list*********',len(pred_48hr_list[0]))
+        
+        
         for i in range(len(pred_6hr_list)):
             for j in range(12):
-                if pred_6hr_list[i][j]<=1000:
+                if pred_6hr_list[i][j] is not None and pred_6hr_list[i][j] <= 1000:
                     statusColor_6hr[i] = 'red'
+                elif pred_6hr_list[i][j] is None:
+                    statusColor_6hr[i] = 'green'
+
                     
         for i in range(len(pred_48hr_list)):
             for j in range(24):
-                if pred_48hr_list[i][j]<=1000:
+                if pred_48hr_list[i][j] is not None and pred_48hr_list[i][j] <= 1000:
                     statusColor_48hr[i] = 'red'
+                elif pred_48hr_list[i][j] is None:
+                    statusColor_48hr[i] = 'green'
             
         print('statusColor_6hr____',statusColor_6hr)
         print('statusColor_48hr___',statusColor_48hr)
@@ -1092,6 +1207,10 @@ def sendToFrontendhttp(stn, selectedDate, fchr, isPast):
                 ErrPAEvalues4.append(PAEvalues[i][-30])
                 ErrPAEvalues5.append(PAEvalues[i][-40])
                 ErrPAEvalues6.append(PAEvalues[i][-48])
+                
+        print('HourPAEvalues____',HourPAEvalues)
+        
+        HourPAEvaluez = [text.split(' ')[1][:5] for text in HourPAEvalues]
         
         #! Fchr legend values sending to the frontend
         if fchr == '6hr':
@@ -1109,9 +1228,10 @@ def sendToFrontendhttp(stn, selectedDate, fchr, isPast):
        #! Fetching the status of the future prediction (tried to handle it in the FE but it's not working there)
         fchr_status = ""
         if fchr== '6hr':
-            status= PredPAEvalues[-12:]
-            print("Status______",status)
-            avg = sum(status)/len(status)
+            data= PredPAEvalues[-12:]
+            data = [value if value is not None else 0 for value in data]
+            print("Status______",data)
+            avg = int(sum(data)/len(data))
             print("Average of____", avg)
             if avg>=2000:
                 fchr_status = "Safe to fly"
@@ -1121,9 +1241,10 @@ def sendToFrontendhttp(stn, selectedDate, fchr, isPast):
                 fchr_status = "Not safe to fly"
                 
         else:
-            status= PredPAEvalues[-24:]
-            print("Status______",status)
-            avg = sum(status)/len(status)
+            data= PredPAEvalues[-24:]
+            data = [value if value is not None else 0 for value in data]
+            print("Status______",data)
+            avg = int(sum(data)/len(data))
             print("Average of____", avg)
             if avg>=2000:
                 fchr_status = "Safe to fly"
@@ -1143,7 +1264,7 @@ def sendToFrontendhttp(stn, selectedDate, fchr, isPast):
                 
         print("selected fchr_______",fchr_status)
 
-        dictPAE = {'h_all': HourPAEvalues, 'a_all': ActualPAEvalues, 'p_all': PredPAEvalues, 
+        dictPAE = {'h_all': HourPAEvaluez, 'a_all': ActualPAEvalues, 'p_all': PredPAEvalues, 
                    'e1_all': ErrPAEvalues1, 'e2_all': ErrPAEvalues2,'e3_all': ErrPAEvalues3,
                    'e4_all': ErrPAEvalues4,'e5_all': ErrPAEvalues5,'e6_all': ErrPAEvalues6, 
                    'live_data_list6hr': list_of_sortedData_6hr, "live_data_list48hr":list_of_sortedData_48hr,
@@ -1290,6 +1411,7 @@ def sendToFrontend(stn, selectedDate, fchr, isPast):
     global values6
     global values48
     global fchr_legend
+    # global allErrorValues
     
     print("The not HTTPs method called____________")
 
@@ -1331,6 +1453,7 @@ def sendToFrontend(stn, selectedDate, fchr, isPast):
             hoursOffset = 6
             hoursOffset_RecentPAE = 3
             fchr_legend = ["T-6", "T-5", "T-4", "T-3", "T-2", "T-1"]
+            
         elif fchr == '48hr':
             values = values48
             hoursOffset = 24
@@ -1352,14 +1475,6 @@ def sendToFrontend(stn, selectedDate, fchr, isPast):
             '\', \'YYYY-MM-DD HH24-MI-SS\')  ORDER BY datetime DESC'
         
         print("getAllPAEvalues_query :", getAllPAEvalues_query)
-        '''
-        print(getAllPAEvalues_query)
-        print("fchr :", fchr)
-        print("lh2 :", lh2)
-        print("th2 :", th2)
-        print("th3 :", th3)
-        print("time_RecentPAE :", time_RecentPAE)
-        '''
         cursor.execute(getAllPAEvalues_query)
         allPAEvalues = cursor.fetchall()
 
@@ -1379,6 +1494,110 @@ def sendToFrontend(stn, selectedDate, fchr, isPast):
         ErrPAEvalues6 = []
         
         statusArray = []
+        
+        global min_error, max_error
+        
+        #! Fetching the data for the average, absolute mean error
+        if fchr == '6hr':
+            # Fetching the min error value in the given table
+            getMinValues = 'SELECT "pred(t-0.5)" AS Prediction, "actual(t)" AS Actual ' + \
+            'FROM (SELECT "pred(t-0.5)", "actual(t)" ' + \
+            'FROM ' + stn + '_PAE_6HR' +' WHERE "error(t-0.5)" = (SELECT MIN("error(t-0.5)") FROM '+ stn +  '_PAE_6HR' +') ' + \
+            'ORDER BY rownum) WHERE rownum = 1'
+            cursor.execute(getMinValues)
+            allMinValues= cursor.fetchall()   
+            min_err1, min_err2 = allMinValues[0]
+            min_error = int(abs(min_err1-min_err2))
+            print('allMinValues_______',min_error)
+                        
+            # Fetching the max error value in the given table
+            getMaxValues = 'SELECT "pred(t-0.5)" AS Prediction, "actual(t)" AS Actual ' + \
+            'FROM (SELECT "pred(t-0.5)", "actual(t)" ' + \
+            'FROM ' + stn +  '_PAE_6HR' +' WHERE "error(t-0.5)" = (SELECT MAX("error(t-0.5)") FROM '+ stn +  '_PAE_6HR' +  ') ' + \
+            'ORDER BY rownum) WHERE rownum = 1'
+            cursor.execute(getMaxValues)
+            allMaxValues=cursor.fetchall()
+            max_err1, max_err2 = allMaxValues[0]
+            max_error = int(abs(max_err1-max_err2))
+            
+            # Average mean error
+            dataForAvgMeanError = 'SELECT "pred(t-0.5)" AS Prediction, "actual(t)" AS Actual ' +\
+                                  'FROM (SELECT * FROM ' + stn +  '_PAE_6HR ' +\
+                                        'WHERE "actual(t)" IS NOT NULL '+\
+                                        'ORDER BY datetime DESC) WHERE ROWNUM <=12'
+            cursor.execute(dataForAvgMeanError)
+            allValuesForMeanError = cursor.fetchall()
+            print("allValuesForMeanError_______",allValuesForMeanError)
+
+            value1 = [int(x[0]) for x in allValuesForMeanError]
+            value2 = [int(x[1]) for x in allValuesForMeanError]
+
+            print('meanAvgError1______',value1)
+            print('meanAvgError2______',value2)
+            
+            mainList = []
+
+            # Getting the absolute difference of prediction and actual
+            for i in range(len(value1)):
+                mainList.append(abs(value1[i]-value2[i]))
+            
+            absolute_values = [abs(x) for x in mainList]  # Calculate the absolute values
+            sum_absolute_values = sum(absolute_values)  # Find the sum of absolute values
+            mean_average = sum_absolute_values / len(mainList)  # Calculate the mean average
+            mean_average = round(mean_average,2)
+            print("Total absolute mean average:", mean_average)
+                            
+                        
+        elif fchr == '48hr':
+            # Fetching the min error value in the given table
+            getMinValues = 'SELECT "pred(t-2)" AS Prediction, "actual(t)" AS Actual ' + \
+            'FROM (SELECT "pred(t-2)", "actual(t)" ' + \
+            'FROM ' + stn +  '_PAE_48HR' + ' WHERE "error(t-2)" = (SELECT MIN("error(t-2)") FROM ' + stn +  '_PAE_48HR' +') ' + \
+            'ORDER BY rownum) WHERE rownum = 1'
+            cursor.execute(getMinValues)
+            allMinValues= cursor.fetchall()   
+            print('allMinValues_______',allMinValues)
+            min_err1, min_err2 = allMinValues[0]
+            min_error = int(abs(min_err1-min_err2))
+               
+            # Fetching the max error value in the given table             
+            getMaxValues = 'SELECT "pred(t-2)" AS Prediction, "actual(t)" AS Actual ' + \
+            'FROM (SELECT "pred(t-2)", "actual(t)" ' + \
+            'FROM ' + stn +  '_PAE_48HR' +' WHERE "error(t-2)" = (SELECT MAX("error(t-2)") FROM ' + stn +  '_PAE_48HR' +') ' + \
+            'ORDER BY rownum) WHERE rownum = 1'
+            cursor.execute(getMaxValues)
+            allMaxValues = cursor.fetchall()
+            print("allMaxValues______",allMaxValues)
+            max_err1, max_err2 = allMaxValues[0]
+            max_error = int(abs(max_err1-max_err2))
+            
+            # Average mean error
+            dataForAvgMeanError =   'SELECT "pred(t-0.5)" AS Prediction, "actual(t)" AS Actual ' +\
+                                    'FROM (SELECT * FROM ' + stn +  '_PAE_48HR ' +\
+                                    'WHERE "actual(t)" IS NOT NULL'+\
+                                    'ORDER BY datetime DESC) WHERE ROWNUM <=12'
+            cursor.execute(dataForAvgMeanError)
+            allValuesForMeanError = cursor.fetchall()
+            print("allValuesForMeanError_______",allValuesForMeanError)
+            value1 = [int(x[0]) for x in allValuesForMeanError]
+            value2 = [int(x[1]) for x in allValuesForMeanError]
+            
+            print('meanAvgError1______',value1)
+            print('meanAvgError2______',value2)
+            
+            mainList = []
+
+            # Getting the absolute difference of prediction and actual
+            for i in range(len(value1)):
+                mainList.append(abs(value1[i]-value2[i]))
+            
+            absolute_values = [abs(x) for x in mainList]  # Calculate the absolute values
+            sum_absolute_values = sum(absolute_values)  # Find the sum of absolute values
+            mean_average = sum_absolute_values / len(mainList)  # Calculate the mean average
+            mean_average = round(mean_average,2)
+            print("Total absolute mean average:", mean_average)
+                                            
+                        
         
         #! Fetching the data for status
         allStatus_Data = []
@@ -1464,7 +1683,7 @@ def sendToFrontend(stn, selectedDate, fchr, isPast):
 
         for i in range(len(pred_6hr_list)):
             for j in range(12):
-                if pred_6hr_list[i][j]<=1000:
+                if pred_6hr_list[i][j] is not None and pred_6hr_list[i][j]<=1000:
                     statusColor_6hr[i] = 'red'
                     
         for i in range(len(pred_48hr_list)):
@@ -1628,6 +1847,10 @@ def sendToFrontend(stn, selectedDate, fchr, isPast):
                 ErrPAEvalues4.append(PAEvalues[i][-32])
                 ErrPAEvalues5.append(PAEvalues[i][-40])
                 ErrPAEvalues6.append(PAEvalues[i][-48])
+        
+        print('HourPAEvalues____',HourPAEvalues)
+        
+        HourPAEvaluez = [text.split(' ')[1][:5] for text in HourPAEvalues]
                 
         #! Fetching the status of the future prediction (tried to handle it in the FE but it's not working there)
         print('PredPAEvalues_________',PredPAEvalues)
@@ -1669,14 +1892,16 @@ def sendToFrontend(stn, selectedDate, fchr, isPast):
         print("selected fchr_______",fchr_status)
         
         if fchr=="48hr" :
-            HourPAEvalues = HourPAEvalues[:19]
+            HourPAEvaluez = HourPAEvaluez[:19]
             PredPAEvalues = PredPAEvalues[:19]
 
-        dictPAE = {'h_all': HourPAEvalues, 'a_all': ActualPAEvalues, 'p_all': PredPAEvalues, 
+        dictPAE = {'h_all': HourPAEvaluez, 'a_all': ActualPAEvalues, 'p_all': PredPAEvalues, 
                    'e1_all': ErrPAEvalues1, 'e2_all': ErrPAEvalues2,'e3_all': ErrPAEvalues3,
                    'e4_all': ErrPAEvalues4,'e5_all': ErrPAEvalues5,'e6_all': ErrPAEvalues6, 
                    'live_data_list6hr': list_of_sortedData_6hr, "live_data_list48hr":list_of_sortedData_48hr,
-                   "fchr_status": fchr_status, "status_color": status_color, "statusList6hr":statusColor_6hr, "statusList48hr":statusColor_48hr, "fchr_legend":fchr_legend, "statusArray":statusArray}
+                   "fchr_status": fchr_status, "status_color": status_color, "statusList6hr":statusColor_6hr, 
+                   "statusList48hr":statusColor_48hr, "fchr_legend":fchr_legend, "statusArray":statusArray, 
+                   "min_error":min_error, "max_error":max_error, "mean_average":mean_average}
 
         print("PredPAEvalues :", PredPAEvalues)
         '''
@@ -1744,9 +1969,6 @@ def sendToFrontend(stn, selectedDate, fchr, isPast):
 
         th2_before = (th2 - pd.DateOffset(days=values['reduction']))
         th2_time = str(th2.hour)+str(th2.minute).zfill(2)
-
-        #print("Manish th2_before :", th2_before)
-        #print("Manish th2_time :", th2)
 
         th2_before_date = str(th2_before.year).zfill(
             4)+'-'+str(th2_before.month).zfill(2)+'-'+str(th2_before.day).zfill(2)
@@ -1818,11 +2040,7 @@ def searchData():
         avp_Actual = []
         avp_Pred = []
         avp_Err = []
-        
 
-        # stn = "Gorakhpur"
-        # fchr = "48HR"
-        
         data = request.data
         start_date = json.loads(data)["dateArray"][0]
         print('Start_data_________',start_date)
@@ -2138,7 +2356,7 @@ def getInitialPredictions():
     # print("stn_selected : ", stn_selected)
     # print("date_selected : ", date_selected)
     # print("fchr_selected : ", fchr_selected)
-    # print("isPast : ", isPast)
+    print("isPast : ", isPast)
 
     initialhttpData = sendToFrontendhttp(
         stn_selected, date_selected, fchr_selected, isPast)

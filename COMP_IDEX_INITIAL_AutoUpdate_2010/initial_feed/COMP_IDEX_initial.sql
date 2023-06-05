@@ -31,6 +31,6 @@ TOT_RRR VARCHAR2(38));
 
 
 INSERT INTO COMP_IDEX4 SELECT * FROM COMP_IDEX4_2010_2022 WHERE 
-TO_CHAR(TO_DATE((year || '-' || month || '-' || dd || ' ' || GGGG||'00'), 'YYYY-MM-DD HH24MISS'),  'YYYY-MM-DD HH24:MI:SS') 
+TO_CHAR(TO_DATE((year || '-' || month || '-' || dd || ' ' || GGGG||'0000'), 'YYYY-MM-DD HH24MISS'),  'YYYY-MM-DD HH24:MI:SS') 
 = '2020-12-01 00:00:00';
 
