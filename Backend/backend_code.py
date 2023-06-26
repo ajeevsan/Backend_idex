@@ -22,18 +22,20 @@ import sys
 import configparser
 import logging
 from preproccess import Clean_data
+from tensorflow.keras import backend as K
+
 
 import os
 os.environ["CUDA_VISIBLE_DEVICES"] = "-1"
 #Remember to uncomment in CNWP
 #Alert Manish
-#os.environ.get["ORACLE_HOME"] = '/usr/lib/oracle/11.2/client64'
+#os.environ["ORACLE_HOME"] = '/usr/lib/oracle/11.2/client64'
 
-# def exit_func(signal, frame):
-#     sys.exit(0)
+def exit_func(signal, frame):
+    sys.exit(0)
 
 
-# signal.signal(signal.SIGINT, exit_func)
+signal.signal(signal.SIGINT, exit_func)
 
 config = configparser.ConfigParser()
 config.optionxform = str
@@ -58,15 +60,6 @@ db_user = config.get('CONNECTION', 'user')
 db_password = config.get('CONNECTION', 'password')
 db_encoding = config.get('CONNECTION', 'encoding')
 dsn = cx_Oracle.makedsn(db_hostname, db_port, db_sid)
-
-#! Set dynamic oracle env variable
-# db_hostname = os.environ.get("VF_HOSTNAME")
-# db_port = os.environ.get("VF_PORT")
-# db_sid = os.environ.get("VF_SID")
-# db_user =  os.environ.get("VF_USERNAME")
-# db_password = os.environ.get("VF_PASSWORD")
-# db_encoding = os.environ.get("VF_ENCODING")
-# dsn = cx_Oracle.makedsn(db_hostname, db_port, db_sid)
 
 
 def whichData(x):
@@ -203,8 +196,10 @@ def predict(station, name1, _pcontinueFrmDate, values, _df_COMP_IDEX4):
         # below line commented on 18-03-2023 Manish Kumar
         #df = fetchData2(station, name1, name2, values['large_hours_len'], stn_id)
         df = _df_COMP_IDEX4
+        
         print(df.head(5))
-        # print(df.shape)
+        #print(df.shape)
+
         path = station+values['fchr']+'.csv'
         df.to_csv(path, index='False')
 
@@ -237,7 +232,7 @@ def predict(station, name1, _pcontinueFrmDate, values, _df_COMP_IDEX4):
         #print("actuals_with_time : ", actuals_with_time)
         
         
-
+    
         # below codes changed by manish for conversion of 6 values to 12 values proccess with shalini's code.
         # *************************************************************************************************************************
         try :
@@ -246,8 +241,10 @@ def predict(station, name1, _pcontinueFrmDate, values, _df_COMP_IDEX4):
             df = sampled_data.copy()
             df = df.tail(values['hours_len'])
 
-            path = station +values['fchr']+ '_befor_model.csv'
-            df.to_csv(path, index="False")
+
+
+            # path = station +values['fchr']+ '_befor_model.csv'
+            # df.to_csv(path, index="False")
             print(df.head())
             print(df.dtypes)
             print(df.shape)
@@ -260,7 +257,7 @@ def predict(station, name1, _pcontinueFrmDate, values, _df_COMP_IDEX4):
             xx =df.index[-1]
             
             file.write(f'last row datetime in the start of model prediction fun-------------------------->{xx}\n\n')
-            file.close()
+            file.close()            
 
             #print(df.head())
             #print(df.dtypes)
@@ -285,30 +282,6 @@ def predict(station, name1, _pcontinueFrmDate, values, _df_COMP_IDEX4):
 
             print("Predictions = ", predictions)
 
-            # if values['fchr'] == "6hr":
-            #     ind = dfr.shape[0]-1
-            #     last_visibility = dfr['VV'].iloc[ind]
-            #     result = predicted_Visibility.flatten()
-
-            #     result_list = []
-            #     result_list.append(last_visibility)
-            #     result_list.extend(result)
-            #     result_list = np.round(np.abs(result_list))
-
-            #     print(result_list)
-            #     range_date = pd.date_range(start='01:00:00', end='07:00:00', freq='H')
-            #     cc = pd.DataFrame(index=range_date)
-            #     cc['Prediction'] = result_list
-            #     print(cc)
-            #     cf = cc.resample('30min').asfreq()
-            #     print(cf)
-            #     cf.interpolate(method='time', inplace=True)
-            #     predictions = cf['Prediction'].values[1:]
-            #     predictions = np.round(np.abs(predictions))
-            #     print("Predictions = ", predictions)
-
-            
-
             predictions = np.nan_to_num(predictions, nan=1000)    
             print("Predictions = ",predictions)
             
@@ -325,7 +298,6 @@ def predict(station, name1, _pcontinueFrmDate, values, _df_COMP_IDEX4):
 
     
         # *******************************************************************************end******************************
-
         filename = "log_out_put"+station +values['fchr'] +".txt"
         path = os.path.join("./my_Loggs/", filename)
         
@@ -341,7 +313,7 @@ def predict(station, name1, _pcontinueFrmDate, values, _df_COMP_IDEX4):
 
         
         lastHour = _pcontinueFrmDate
-        # print("lastHour : ______________________________________________", lastHour)
+        #print("lastHour : ______________________________________________", lastHour)
         st = pd.to_datetime(lastHour)
         st_copy = st
 
@@ -381,8 +353,16 @@ def predict(station, name1, _pcontinueFrmDate, values, _df_COMP_IDEX4):
             print('Setting the actual value from COMP_IDX4:', current_actual)
 
         print('GET CURRENT ACTUAL_______________________________', current_actual)
+        
+        #! Handling the actual value when its 0 or 9900
+        if current_actual == 0:
+            current_actual = 50
+        elif current_actual == 9900:
+            current_actual = 10000
+
         current_actual = float(current_actual)
 
+        print('current_actual_for_DB___________',current_actual)
         '''
         if st in actuals_with_time.keys():
             current_actual = actuals_with_time[st]
@@ -397,7 +377,7 @@ def predict(station, name1, _pcontinueFrmDate, values, _df_COMP_IDEX4):
             current_actual)+' where datetime=to_timestamp(\''+str(lastHour)+'\', \'YYYY-MM-DD HH24-MI-SS\') '
         
         #print("Actual List :", actualList)
-        #print("oracle Query :", insert)
+        print("oracle Query :", insert)
         cursor.execute(insert)
 
         colList = []
@@ -409,6 +389,8 @@ def predict(station, name1, _pcontinueFrmDate, values, _df_COMP_IDEX4):
         select = 'select * from ' + \
             str(station) + '_pae_'+values['fchr']+' where datetime=to_timestamp(\''+str(
                 lastHour)+'\', \'YYYY-MM-DD HH24-MI-SS\') '
+        
+        print(f"______________________________select  {select}")
         cursor.execute(select)
         cur_row = list(cursor.fetchall()[0])
         k = values['lastPredReverseNo']
@@ -439,6 +421,7 @@ def predict(station, name1, _pcontinueFrmDate, values, _df_COMP_IDEX4):
         insert = 'insert into ' + str(station) + '_pae_'+values['fchr']+' (datetime,' + col_name+') values(to_timestamp(\''+str(
             datelist[-1])+'\', \'YYYY-MM-DD HH24-MI-SS\') ,' + str(predictions[-1]) + ' )'
         cursor.execute(insert)
+        print("Insert_into_PAE_table____",insert)
         connection.commit()
 
     except Exception as ex:
@@ -521,11 +504,18 @@ def getPredictions48(_pcontinueFrmDate):
 
         ################################################################################
         """ When loop start get latest data from database, once for all stations """
-        _oraQuery = "> to_char((to_date('2023-01-20', 'YYYY-MM-DD HH24:MI:SS')) - "\
+        _oraQuery = "> to_char((to_date('"+_pcontinueFrmDate+"', 'YYYY-MM-DD HH24:MI:SS')) - "\
                     "INTERVAL '23' DAY, 'YYYY-MM-DD HH24:MI:SS') AND ( datetime ) <="\
                     "to_char((to_date('"+_pcontinueFrmDate+"'"", 'YYYY-MM-DD HH24: MI: SS') + "\
                     "INTERVAL '30' MINUTE), 'YYYY-MM-DD HH24: MI: SS')"
+        
+        print(f"*****************************************************************************************getPredictions48_____ \n {_oraQuery}")
         df = getLatestRec_COMP_IDEX4(_oraQuery)
+
+        df.to_csv('getPredictions48.csv', index = False)
+
+
+
         ################################################################################
 
         all_predictions = {}
@@ -600,6 +590,9 @@ def getPredictions6(_pcontinueFrmDate):
         #print(_oraQuery)
         
         df = getLatestRec_COMP_IDEX4(_oraQuery)
+
+        df.to_csv('getPredictions6.csv', index = False)
+
         #return
         #print("getLatestRec_COMP_IDEX4 :", df.head())
         #return;
@@ -635,6 +628,27 @@ def getPredictions6(_pcontinueFrmDate):
     except Exception as ex:
         print("Error occured in function getPredictions6 ", ex)
     
+
+def weighted_rmse(alpha = 4):
+    def loss_function(y_true, y_pred):
+        weights = tf.math.exp(-alpha * y_true)
+        mse = K.mean(tf.square(y_pred - y_true))
+        wrmse = K.sqrt(K.mean(tf.multiply(tf.square(y_pred - y_true), weights)))
+        return wrmse
+    return loss_function
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 # loading and start predicting for all the cities
 def loadModels():
@@ -695,15 +709,15 @@ def loadModels():
             open(config.get('loadModels', 'HND48_x_scaler_path'), 'rb'))
         y_scaler_HND48 = load(
             open(config.get('loadModels', 'HND48_y_scaler_path'), 'rb'))
-
+        
         all_models['model_SNG_6hr'] = tf.keras.models.load_model(
-            config.get('loadModels', 'SNG6_path'), compile=False)
+            config.get('loadModels', 'SNG6_path'),custom_objects={'loss_function': weighted_rmse(alpha = 4)}, compile=False)
         all_models['model_GKP_6hr'] = tf.keras.models.load_model(
-            config.get('loadModels', 'GKP6_path'), compile=False)
+            config.get('loadModels', 'GKP6_path'),custom_objects={'loss_function': weighted_rmse(alpha = 4)}, compile=False)
         all_models['model_HND_6hr'] = tf.keras.models.load_model(
-            config.get('loadModels', 'HND6_path'), compile=False)
+            config.get('loadModels', 'HND6_path'), custom_objects={'loss_function': weighted_rmse(alpha = 4)},compile=False)
         all_models['model_CDH_6hr'] = tf.keras.models.load_model(
-            config.get('loadModels', 'CDH6_path'), compile=False)
+            config.get('loadModels', 'CDH6_path'), custom_objects={'loss_function': weighted_rmse(alpha = 4)},compile=False)
 
         all_models['model_SNG_48hr'] = tf.keras.models.load_model(
             config.get('loadModels', 'SNG48_path'), compile=False)
@@ -774,11 +788,6 @@ def fillPAE(dt):
             cursor.close()
         if connection:
             connection.close()
-            
-global fchr_status
-global status_color
-global send_color1
-global send_color2
 
 # function for sending initial (default selected city, forecast hour) values to frontend
 def sendToFrontendhttp(stn, selectedDate, fchr, isPast):
@@ -787,10 +796,7 @@ def sendToFrontendhttp(stn, selectedDate, fchr, isPast):
     global values6
     global values48
     global initialHttpData
-    global fchr_legend
-    
-    
-    print("The HTTPs method called____________")
+    global is48hr 
 
     try:
 
@@ -803,22 +809,26 @@ def sendToFrontendhttp(stn, selectedDate, fchr, isPast):
         elif stn == "Chandigarh":
             stn = 'CDH'
 
+        
+
         connection = cx_Oracle.connect(
             user=db_user, password=db_password, dsn=dsn, encoding=db_encoding)
         cursor = connection.cursor()
 
-        hoursOffset = 0 
+        hoursOffset = 0 # Show records from last 6/24 hours
         if fchr == '6hr':
             values = values6
             hoursOffset = 6
             hoursOffset_RecentPAE = 3
+            is48hr = False
         elif fchr == '48hr':
             values = values48
             hoursOffset = 24
             hoursOffset_RecentPAE = 12
+            is48hr = True
 
         lh2_query = 'select max(datetime) from '+stn+'_pae_'+fchr
-        print("lh2_query___________________",lh2_query)
+        print('lh2_query________',lh2_query)
         cursor.execute(lh2_query)
         print("selectedDate : ", selectedDate)
         #print("lh2_query :", lh2_query)
@@ -826,15 +836,20 @@ def sendToFrontendhttp(stn, selectedDate, fchr, isPast):
         th2 = lh2 - pd.DateOffset(hours=values['forecastHours'])
 
         th3 = th2 - pd.DateOffset(hours=hoursOffset)
+        print('th2____',th2)
+        print('th3____',th3)
         time_RecentPAE = th2 - pd.DateOffset(hours=hoursOffset_RecentPAE)
+
+        print('time_RecentPAE____',time_RecentPAE)
 
         getAllPAEvalues_query = 'select * from ' + stn + '_PAE_'+fchr + \
             ' where datetime<=to_timestamp(\''+str(th2) + \
             '\', \'YYYY-MM-DD HH24-MI-SS\') and datetime >= to_timestamp(\''+str(th3) + \
             '\', \'YYYY-MM-DD HH24-MI-SS\')  ORDER BY datetime DESC'
         
-        print('getAllPAEvalues_query_________',getAllPAEvalues_query)
+        print('getAllPAEvalues_query__________',getAllPAEvalues_query)
         '''
+        
         print("fchr :", fchr)
         print("lh2 :", lh2)
         print("th2 :", th2)
@@ -848,330 +863,463 @@ def sendToFrontendhttp(stn, selectedDate, fchr, isPast):
         allActualPAEvalues = []
         allPredPAEvalues = []
         allErrorPAEvalues = []
+        predActualData = []
 
         HourPAEvalues = []
         ActualPAEvalues = []
         PredPAEvalues = []
+        
+        #! PAE values for the t-1 to t-24 error
+        errorActualPAEvalues = []
+        errorPredPAEvalues = []
+        errorHourPAEvalues = [] 
+        timeListPAEvalues = []
+        
+        
+        
+        #! Storing the error list 6hr
         ErrPAEvalues1 = []
         ErrPAEvalues2 = []
         ErrPAEvalues3 = []
         ErrPAEvalues4 = []
         ErrPAEvalues5 = []
         ErrPAEvalues6 = []
-        statusArray = []
+        ErrPAEvalues7 = []
+        ErrPAEvalues8 = []
+        ErrPAEvalues9 = []
+        ErrPAEvalues10 = []
+        ErrPAEvalues11 = []
+        ErrPAEvalues12 = []
         
-        global min_error, max_error, mean_average
+        #! Storing the error list for 48hrs
+        ErrPAEvalues48_1 = []
+        ErrPAEvalues48_2 = []
+        ErrPAEvalues48_3 = []
+        ErrPAEvalues48_4 = []
+        ErrPAEvalues48_5 = []
+        ErrPAEvalues48_6 = []
+        ErrPAEvalues48_7 = []
+        ErrPAEvalues48_8 = []
+        ErrPAEvalues48_9 = []
+        ErrPAEvalues48_10 = []
+        ErrPAEvalues48_11 = []
+        ErrPAEvalues48_12 = []
+        ErrPAEvalues48_13 = []
+        ErrPAEvalues48_14 = []
+        ErrPAEvalues48_15 = []
+        ErrPAEvalues48_16 = []
+        ErrPAEvalues48_17 = []
+        ErrPAEvalues48_18 = []
+        ErrPAEvalues48_19 = []
+        ErrPAEvalues48_20 = []
+        ErrPAEvalues48_21 = []
+        ErrPAEvalues48_22 = []
+        ErrPAEvalues48_23 = []
+        ErrPAEvalues48_24 = []
         
-        #! Fetching the data for the average, absolute mean error
+        
+        #! List to store the values of the predictions of 6hr
+        PredPAEvalues1 = []
+        PredPAEvalues2 = []
+        PredPAEvalues3 = []
+        PredPAEvalues4 = []
+        PredPAEvalues5 = []
+        PredPAEvalues6 = []
+        PredPAEvalues7 = []
+        PredPAEvalues8 = []
+        PredPAEvalues9 = []
+        PredPAEvalues10 = []
+        PredPAEvalues11 = []
+        PredPAEvalues12 = []
+        
+        #! List to store the values of the predictions of 48hr
+        PredPAEvalues_48_1 = []
+        PredPAEvalues_48_2 = []
+        PredPAEvalues_48_3 = []
+        PredPAEvalues_48_4 = []
+        PredPAEvalues_48_5 = []
+        PredPAEvalues_48_6 = []
+        PredPAEvalues_48_7 = []
+        PredPAEvalues_48_8 = []
+        PredPAEvalues_48_9 = []
+        PredPAEvalues_48_10 = []
+        PredPAEvalues_48_11 = []
+        PredPAEvalues_48_12 = []
+        PredPAEvalues_48_13 = []
+        PredPAEvalues_48_14 = []
+        PredPAEvalues_48_15 = []
+        PredPAEvalues_48_16 = []
+        PredPAEvalues_48_17 = []
+        PredPAEvalues_48_18 = []
+        PredPAEvalues_48_19 = []
+        PredPAEvalues_48_20 = []
+        PredPAEvalues_48_21 = []
+        PredPAEvalues_48_22 = []
+        PredPAEvalues_48_23 = []
+        PredPAEvalues_48_24 = []
+        
+        #! List to store the prediction actual values in the list for 6hrs
+        ErrPredValues1 = []
+        ErrPredValues2 = []
+        ErrPredValues3 = []
+        ErrPredValues4 = []
+        ErrPredValues5 = []
+        ErrPredValues6 = []
+        ErrPredValues7 = []
+        ErrPredValues8 = []
+        ErrPredValues9 = []
+        ErrPredValues10 = []
+        ErrPredValues11 = []
+        ErrPredValues12 = []
+        
+        #! List to store the prediciton in list for 48hrs
+        errorPredvalues_48_1 = []
+        errorPredvalues_48_2 = []
+        errorPredvalues_48_3 = []
+        errorPredvalues_48_4 = []
+        errorPredvalues_48_5 = []
+        errorPredvalues_48_6 = []
+        errorPredvalues_48_7 = []
+        errorPredvalues_48_8 = []
+        errorPredvalues_48_9 = []
+        errorPredvalues_48_10 = []
+        errorPredvalues_48_11 = []
+        errorPredvalues_48_12 = []
+        errorPredvalues_48_13 = []
+        errorPredvalues_48_14 = []
+        errorPredvalues_48_15 = []
+        errorPredvalues_48_16 = []
+        errorPredvalues_48_17 = []
+        errorPredvalues_48_18 = []
+        errorPredvalues_48_19 = []
+        errorPredvalues_48_20 = []
+        errorPredvalues_48_21 = []
+        errorPredvalues_48_22 = []
+        errorPredvalues_48_23 = []
+        errorPredvalues_48_24 = []
+        
+        
+        
+        ErrPAEvalues = []
+        ErrPAEvalues = []
+        ErrPAEvalues = []
+        
+        #! List to store the rmse and mape errors
+        mape_list = []
+        nrmse_list = []
+        nrmae_list = []
+        
+        #! Getting values for the t-1 to t-12 error table
         if fchr == '6hr':
-            # Fetching the min error value in the given table
-            getMinValues = 'SELECT "pred(t-0.5)" AS Prediction, "actual(t)" AS Actual ' + \
-            'FROM (SELECT "pred(t-0.5)", "actual(t)" ' + \
-            'FROM ' + stn + '_PAE_6HR' +' WHERE "error(t-0.5)" = (SELECT MIN("error(t-0.5)") FROM '+ stn +  '_PAE_6HR' +') ' + \
-            'ORDER BY rownum) WHERE rownum = 1'
-            cursor.execute(getMinValues)
-            allMinValues= cursor.fetchall()   
-            min_err1, min_err2 = allMinValues[0]
-            min_error = int(abs(min_err1-min_err2))
-            print('allMinValues_______',min_error)
-                        
-            # Fetching the max error value in the given table
-            getMaxValues = 'SELECT "pred(t-0.5)" AS Prediction, "actual(t)" AS Actual ' + \
-            'FROM (SELECT "pred(t-0.5)", "actual(t)" ' + \
-            'FROM ' + stn +  '_PAE_6HR' +' WHERE "error(t-0.5)" = (SELECT MAX("error(t-0.5)") FROM '+ stn +  '_PAE_6HR' +  ') ' + \
-            'ORDER BY rownum) WHERE rownum = 1'
-            cursor.execute(getMaxValues)
-            allMaxValues=cursor.fetchall()
-            max_err1, max_err2 = allMaxValues[0]
-            max_error = int(abs(max_err1-max_err2))
-            
-            # Average mean error
-            dataForAvgMeanError = 'SELECT "pred(t-0.5)" AS Prediction, "actual(t)" AS Actual ' +\
-                                  'FROM (SELECT * FROM ' + stn +  '_PAE_6HR ' +\
-                                        'WHERE "actual(t)" IS NOT NULL '+\
-                                        'ORDER BY datetime DESC) WHERE ROWNUM <=12'
-            cursor.execute(dataForAvgMeanError)
-            allValuesForMeanError = cursor.fetchall()
-            print("allValuesForMeanError_______",allValuesForMeanError)
+            # lh2 = cursor.fetchall()[0][0]
+            # th2 = lh2 - pd.DateOffset(hours=values['forecastHours'])
+            print('inside 6hr error')
+            th2_adjusted = th2 - pd.DateOffset(hours=0)
+            th3_adjusted = th3 - pd.DateOffset(hours=1)
 
-            value1 = [int(x[0]) for x in allValuesForMeanError]
-            value2 = [int(x[1]) for x in allValuesForMeanError]
+            print('th2____', th2_adjusted)
+            print('th3____', th3_adjusted)
 
-            print('meanAvgError1______',value1)
-            print('meanAvgError2______',value2)
-            
-            mainList = []
+            time_RecentPAE = th2_adjusted - pd.DateOffset(hours=hoursOffset_RecentPAE)
+            print('time_RecentPAE____', time_RecentPAE)
 
-            # Getting the absolute difference of prediction and actual
-            for i in range(len(value1)):
-                mainList.append(abs(value1[i]-value2[i]))
-            
-            absolute_values = [abs(x) for x in mainList]  # Calculate the absolute values
-            sum_absolute_values = sum(absolute_values)  # Find the sum of absolute values
-            mean_average = sum_absolute_values / len(mainList)  # Calculate the mean average
+            getAllPAEvalues_query2 = "SELECT * FROM " + stn + "_PAE_" + fchr + \
+                                    " WHERE datetime >= to_timestamp('" + str(th3_adjusted) + \
+                                    "', 'YYYY-MM-DD HH24-MI-SS') AND datetime <= to_timestamp('" + str(th2_adjusted) + \
+                                    "', 'YYYY-MM-DD HH24-MI-SS') ORDER BY datetime ASC"
 
-            print("Total absolute mean average:", mean_average)
-                            
-                        
-        elif fchr == '48hr':
-            # Fetching the min error value in the given table
-            getMinValues = 'SELECT "pred(t-2)" AS Prediction, "actual(t)" AS Actual ' + \
-            'FROM (SELECT "pred(t-2)", "actual(t)" ' + \
-            'FROM ' + stn +  '_PAE_48HR' + ' WHERE "error(t-2)" = (SELECT MIN("error(t-2)") FROM ' + stn +  '_PAE_48HR' +') ' + \
-            'ORDER BY rownum) WHERE rownum = 1'
-            cursor.execute(getMinValues)
-            allMinValues= cursor.fetchall()   
-            print('allMinValues_______',allMinValues)
-            min_err1, min_err2 = allMinValues[0]
-            min_error = int(abs(min_err1-min_err2))
-               
-            # Fetching the max error value in the given table             
-            getMaxValues = 'SELECT "pred(t-2)" AS Prediction, "actual(t)" AS Actual ' + \
-            'FROM (SELECT "pred(t-2)", "actual(t)" ' + \
-            'FROM ' + stn +  '_PAE_48HR' +' WHERE "error(t-2)" = (SELECT MAX("error(t-2)") FROM ' + stn +  '_PAE_48HR' +') ' + \
-            'ORDER BY rownum) WHERE rownum = 1'
-            cursor.execute(getMaxValues)
-            allMaxValues = cursor.fetchall()
-            print("allMaxValues______",allMaxValues)
-            max_err1, max_err2 = allMaxValues[0]
-            max_error = int(abs(max_err1-max_err2))
+            print('getAllPAEvalues_query2_____Http',getAllPAEvalues_query2)
+            cursor.execute(getAllPAEvalues_query2)
+            PAEvalues2 = cursor.fetchall()
             
-            # Average mean error
-            dataForAvgMeanError =   'SELECT "pred(t-2)" AS Prediction, "actual(t)" AS Actual ' +\
-                                    'FROM (SELECT * FROM ' + stn +  '_PAE_48HR ' +\
-                                    'WHERE "actual(t)" IS NOT NULL '+\
-                                    'ORDER BY datetime DESC) WHERE ROWNUM <=24'
-            cursor.execute(dataForAvgMeanError)
-            allValuesForMeanError = cursor.fetchall()
-            print("allValuesForMeanError_______",allValuesForMeanError)
-            value1 = [int(x[0]) for x in allValuesForMeanError]
-            value2 = [int(x[1]) for x in allValuesForMeanError]
-            
-            print('meanAvgError1______',value1)
-            print('meanAvgError2______',value2)
-            
-            mainList = []
-
-            # Getting the absolute difference of prediction and actual
-            for i in range(len(value1)):
-                mainList.append(abs(value1[i]-value2[i]))
-            
-            absolute_values = [abs(x) for x in mainList]  # Calculate the absolute values
-            sum_absolute_values = sum(absolute_values)  # Find the sum of absolute values
-            mean_average = sum_absolute_values / len(mainList)  # Calculate the mean average
-
-            print("Total absolute mean average:", mean_average)
-        
-        #! Fetching the data for status
-        allStatus_Data = []
-        stn_name_list = [x.replace(" ", '') for x in config.get('stnTableName', 'list').split(',')]
-        stn_name_list_6hr = [x.replace(" ", '') for x in config.get('stnTableName', 'list6hr').split(',')]
-        stn_name_list_48hr = [x.replace(" ", '') for x in config.get('stnTableName', 'list48hr').split(',')]
-        pred_6hr_list = []
-        pred_48hr_list = []
-        allPredValues = []
-
-        dateQuery6 = """
-                    SELECT datetime
-                    FROM (
-                    SELECT datetime
-                    FROM gkp_pae_6hr
-                    WHERE "actual(t)" IS NOT NULL
-                    ORDER BY datetime DESC
-                    )
-                    WHERE ROWNUM = 1
-                    """        
-        cursor.execute(dateQuery6)
-        lh6 = cursor.fetchall()
-        lh6 = lh6[0][0]
-        formatted_datetime6 = lh6.strftime('%Y-%m-%d %H:%M:%S')
-        
-        
-        dateQuery48 = """
-                    SELECT datetime
-                    FROM (
-                    SELECT datetime
-                    FROM gkp_pae_48hr
-                    WHERE "actual(t)" IS NOT NULL
-                    ORDER BY datetime DESC
-                    )
-                    WHERE ROWNUM = 1
-                    """
-        cursor.execute(dateQuery48)
-        lh48 = cursor.fetchall()
-        lh48 = lh48[0][0]
-        formatted_datetime48 = lh48.strftime('%Y-%m-%d %H:%M:%S')
-        
-        print('lh6_____',formatted_datetime6)
-        print('lh48____',formatted_datetime48)
-        
-        for i in range(len(stn_name_list_6hr)):
-            temp = []
-            getAllPAEvalues_query = 'select * from ' + stn_name_list_6hr[i] + '_PAE_'+ '6hr' + \
-            ' where datetime=to_timestamp(\''+str(formatted_datetime6) + \
-            '\', \'YYYY-MM-DD HH24-MI-SS\') ORDER BY datetime DESC'
-            print('fetch_data_6hr_______', getAllPAEvalues_query)
-            cursor.execute(getAllPAEvalues_query)
-            allPredValues = cursor.fetchall()
-            print('allPredValues________',allPredValues)
-            for j in range(1,25,2):
-                k = 0
-                temp.append(allPredValues[k][j])
-                k+=1
-            pred_6hr_list.append(temp)
+            for i in range(len(PAEvalues2)):
+                errorHourPAEvalues.append(PAEvalues2[i][0].strftime('%Y-%m-%d %H:%M:%S'))
+                errorActualPAEvalues.append(PAEvalues2[i][-1])
+                errorPredPAEvalues.append(PAEvalues2[i][-3])
                 
-        for i in range(4):
-            temp = []
-            getAllPAEvalues_query = 'select * from ' + stn_name_list_48hr[i] + '_PAE_'+'48hr' + \
-            ' where datetime=to_timestamp(\''+str(formatted_datetime48) + \
-            '\', \'YYYY-MM-DD HH24-MI-SS\') ORDER BY datetime DESC'
-            print('fetch_data_48hr_______',getAllPAEvalues_query)
-            cursor.execute(getAllPAEvalues_query)
-            allPredValues = cursor.fetchall()
-            print('allPredValues48_______',allPredValues)
-            for j in range(1,49,2):
-                k = 0
-                temp.append(allPredValues[k][j])
-                k+=1
-            pred_48hr_list.append(temp)
-        
-        print('pred_6hr_list____',pred_6hr_list)
-        print('pred_48hr_list____',pred_48hr_list)
-        
-        
-        #! Run the arrays individually to see if there is any visibility value lesser than the recommended visibility 
-        statusColor_6hr = ['green','green','green','green']
-
-        statusColor_48hr = ['green','green','green','green']
-
-        print('pred_6hr_list_____',pred_6hr_list)
-        print('pred_48hr_list_____',pred_48hr_list)
-        
-        
-        print('Length of pred_6hr_list*********',len(pred_6hr_list[0]))
-        print('Length of pred_48hr_list*********',len(pred_48hr_list[0]))
-        
-        
-        for i in range(len(pred_6hr_list)):
-            for j in range(12):
-                if pred_6hr_list[i][j] is not None and pred_6hr_list[i][j] <= 1000:
-                    statusColor_6hr[i] = 'red'
-                elif pred_6hr_list[i][j] is None:
-                    statusColor_6hr[i] = 'green'
-
-                    
-        for i in range(len(pred_48hr_list)):
-            for j in range(24):
-                if pred_48hr_list[i][j] is not None and pred_48hr_list[i][j] <= 1000:
-                    statusColor_48hr[i] = 'red'
-                elif pred_48hr_list[i][j] is None:
-                    statusColor_48hr[i] = 'green'
-            
-        print('statusColor_6hr____',statusColor_6hr)
-        print('statusColor_48hr___',statusColor_48hr)
-        
-        print('stn_name_list________',stn_name_list)
-        # stn_name_48HR = ["GKP_PAE_48HR","SNG_PAE_48HR","HND_PAE_48HR","CDH_PAE_48HR"]
-        
-        for i in range(len(stn_name_list)):
-            liveData6HR = []
-            if i <4:
-                status_value_6hr =" SELECT \"error(t-1.0)\" FROM ("+\
-                " SELECT \"error(t-1.0)\" FROM " + stn_name_list[i] + " WHERE DATETIME <= " +\
-                "(SELECT MAX(DATETIME) FROM " + stn_name_list[i] + " WHERE \"error(t-1.0)\" IS NOT NULL) ORDER BY DATETIME DESC) WHERE ROWNUM <= 6"
-                cursor.execute(status_value_6hr)
-                live_6hr = cursor.fetchall()
-                for j in range(len(live_6hr)):
-                    liveData6HR.append(live_6hr[j][0])
-            
-            else:
-                status_value_48hr = " SELECT \"error(t-2)\" FROM ("+\
-                " SELECT \"error(t-2)\" FROM " + stn_name_list[i] + " WHERE DATETIME <= " +\
-                "(SELECT MAX(DATETIME) FROM " + stn_name_list[i] + " WHERE \"error(t-2)\" IS NOT NULL) ORDER BY DATETIME DESC) WHERE ROWNUM <= 6"
-                cursor.execute(status_value_48hr)
-                live_48hr = cursor.fetchall()
-                for j in range(len(live_48hr)):
-                    liveData6HR.append(live_48hr[j][0])
-            
-            allStatus_Data.append(liveData6HR)
-        
-        print('allStatus_Data_______',allStatus_Data)
-            
-        #! Make the list of the error station and the last actual value
-        average = []
-        for arr in allStatus_Data:
-            avg=sum(arr)/len(arr)
-            average.append(avg)
-            
-        part1 = average[:4]
-        part2 = average[4:]
-
-        # Create two dictionaries to store the results
-        dict1 = {"Gorakhpur": part1[0], "Srinagar": part1[1], "Hindan": part1[2], "Chandigarh": part1[3]}
-        dict2 = {"Gorakhpur": part2[0], "Srinagar": part2[1], "Hindan": part2[2], "Chandigarh": part2[3]}
-
-        # Print the results
-        print("The dictonary data 1____",dict1)
-        print("The dictonary data 2____",dict2)
-        
-        dict1_rounded = {k: round(v, 2) for k, v in dict1.items()}
-        dict2_rounded = {k: round(v, 2) for k, v in dict2.items()}
-        
-        sorted_dict1 = {k: v for k, v in sorted(dict1_rounded.items(), key=lambda item: item[1], reverse=False)}
-        sorted_dict2 = {k: v for k, v in sorted(dict2_rounded.items(), key=lambda item: item[1], reverse=False)}
-        
-        print('The rounded Values1_________',list(sorted_dict1.keys()))
-        print('The rounded Values2_________',list(sorted_dict2.keys()))
-        print('The rounded Values1_________',list(sorted_dict1.values()))
-        print('The rounded Values2_________',list(sorted_dict2.values()))
-
-        list_sortedColor1 = list(sorted_dict1.values())
-        list_sortedColor2 = list(sorted_dict2.values())
-
-        send_color1 = ["","","",""]
-        send_color2 = ["","","",""]
-        
-        for i in range(len(list_sortedColor1)):
-            if list_sortedColor1[i] < 50:
-                send_color1[i] = "green"
-            elif list_sortedColor1[i]>40 and list_sortedColor1[i]<400:
-                send_color1[i] = "#e0d100"
-            else:
-                send_color1[i] = "red" 
                 
-        for i in range(len(list_sortedColor1)):
-            if list_sortedColor2[i] < 50:
-                send_color2[i] = "green"
-            elif list_sortedColor2[i]>40 and list_sortedColor1[i]<400:
-                send_color2[i] = "#e0d100"
-            else:
-                send_color2[i] = "red" 
-        
-        list_of_sortedData_6hr = list(sorted_dict1.keys())
-        list_of_sortedData_48hr = list(sorted_dict2.keys())
-        
-        print("LIVEtEST________________--",allStatus_Data)
+                #! Store the predictions values
+                PredPAEvalues1.append(PAEvalues2[i][-3])
+                PredPAEvalues2.append(PAEvalues2[i][-5])
+                PredPAEvalues3.append(PAEvalues2[i][-7])
+                PredPAEvalues4.append(PAEvalues2[i][-9])
+                PredPAEvalues5.append(PAEvalues2[i][-11])
+                PredPAEvalues6.append(PAEvalues2[i][-13])
+                PredPAEvalues7.append(PAEvalues2[i][-15])
+                PredPAEvalues8.append(PAEvalues2[i][-17])
+                PredPAEvalues9.append(PAEvalues2[i][-19])
+                PredPAEvalues10.append(PAEvalues2[i][-21])
+                PredPAEvalues11.append(PAEvalues2[i][-23])
+                PredPAEvalues12.append(PAEvalues2[i][-25])
+                
+                
+                #! Store the error values
+                ErrPAEvalues1.append(PAEvalues2[i][-2])
+                ErrPAEvalues2.append(PAEvalues2[i][-4])
+                ErrPAEvalues3.append(PAEvalues2[i][-6])
+                ErrPAEvalues4.append(PAEvalues2[i][-8])
+                ErrPAEvalues5.append(PAEvalues2[i][-10])
+                ErrPAEvalues6.append(PAEvalues2[i][-12])
+                ErrPAEvalues7.append(PAEvalues2[i][-14])
+                ErrPAEvalues8.append(PAEvalues2[i][-16])
+                ErrPAEvalues9.append(PAEvalues2[i][-18])
+                ErrPAEvalues10.append(PAEvalues2[i][-20])
+                ErrPAEvalues11.append(PAEvalues2[i][-22])
+                ErrPAEvalues12.append(PAEvalues2[i][-24])
 
+            # print('errorPredPAEvalues___',errorPredPAEvalues)
+            
+            #! Difference of actual vs predictions and storing them in a list
+            
+            for i in range(3,15):
+                ErrPredValues1.append(abs(errorActualPAEvalues[i] - PredPAEvalues1[i]))
+                ErrPredValues2.append(abs(errorActualPAEvalues[i] - PredPAEvalues2[i]))
+                ErrPredValues3.append(abs(errorActualPAEvalues[i] - PredPAEvalues3[i]))
+                ErrPredValues4.append(abs(errorActualPAEvalues[i] - PredPAEvalues4[i]))
+                ErrPredValues5.append(abs(errorActualPAEvalues[i] - PredPAEvalues5[i]))
+                ErrPredValues6.append(abs(errorActualPAEvalues[i] - PredPAEvalues6[i]))
+                ErrPredValues7.append(abs(errorActualPAEvalues[i] - PredPAEvalues7[i]))
+                ErrPredValues8.append(abs(errorActualPAEvalues[i] - PredPAEvalues8[i]))
+                ErrPredValues9.append(abs(errorActualPAEvalues[i] - PredPAEvalues9[i]))
+                ErrPredValues10.append(abs(errorActualPAEvalues[i] - PredPAEvalues10[i]))
+                ErrPredValues11.append(abs(errorActualPAEvalues[i] - PredPAEvalues11[i]))
+                ErrPredValues12.append(abs(errorActualPAEvalues[i] - PredPAEvalues12[i]))
+            
+            print('ErrPredValues12_insideHttp____',ErrPredValues1)
+            print('PredPAEvalues1__6___insideHttp',PredPAEvalues1)
+            print('errorActualPAEvalues___insideHttp',errorActualPAEvalues)
+            
+            #! Finding the mean root mean square error & mean absolute percentage error
+            e_lists = [PredPAEvalues1,PredPAEvalues1,PredPAEvalues2,PredPAEvalues3,PredPAEvalues4,PredPAEvalues5,PredPAEvalues6,PredPAEvalues7,PredPAEvalues8,PredPAEvalues9,PredPAEvalues10,PredPAEvalues11,PredPAEvalues12]
+            actual_list = errorActualPAEvalues[3:15]
+            
+            for i, e_list in enumerate(e_lists):
+                squared_errors = [(actual - pred) ** 2 for actual, pred in zip(actual_list, e_list)]
+                rmse = np.sqrt(np.mean(squared_errors))
+                # rmse = rmse/100
+                # rmse_list.append(round(rmse, 2))
+                
+                
+                diff = max(actual_list) - min(actual_list)
+                if diff != 0:
+                    nrmse = (rmse/diff) *100
+                else: 
+                    nrmse = 0
+                print('Normalized_Root_Mean_Square_Error____',nrmse)
+                nrmse_list.append(round(nrmse,2))
+                
+                absolute_errors = [abs((actual - pred) / actual) for actual, pred in zip(actual_list, e_list)]
+                mape = np.mean(absolute_errors) * 100
+                mape_list.append(round(mape,2))
+    
+                absolute_errors = [abs(actual - pred) for actual, pred in zip(actual_list, e_list)]
+                mae = np.mean(absolute_errors)
+                # mae = mae/100
+                if diff != 0:
+                    nrmae = (mae/diff) *100
+                else: 
+                    nrmae = 0
+                print('Normalized_Root_Mean_Absolute_Error______',nrmae_list)
+                nrmae_list.append(round(nrmae, 2))
+                
+
+            print('rmse_list___',mape_list)
+            print('nrmse_list___',nrmse_list)
+            print('mrmae_list___',nrmae_list)
+            is48hr = False
+            
+        #! Getting the values for t-1 to t-24 values
+        if fchr == '48hr':
+            print('inside 48hr error')
+            # lh2 = cursor.fetchall()[0][0]
+            # th2 = lh2 - pd.DateOffset(hours=values['forecastHours'])
+            th2_adjusted = th2 - pd.DateOffset(days=0)  # Subtract one day
+
+            th3 = th2 - pd.DateOffset(hours=hoursOffset)
+            th3_adjusted =th3 -  pd.DateOffset(days=1)  # Subtract one day
+
+            print('th2____', th2)
+            print('th3____', th3)
+            time_RecentPAE = th2 - pd.DateOffset(hours=hoursOffset_RecentPAE)
+
+            print('time_RecentPAE____', time_RecentPAE)
+
+            getAllPAEvalues_query2 = 'select * from ' + stn + '_PAE_' + fchr + \
+                        ' where datetime>=to_timestamp(\'' + str(th3_adjusted) + \
+                        '\', \'YYYY-MM-DD HH24-MI-SS\') and datetime<=to_timestamp(\'' + str(th2_adjusted) + \
+                        '\', \'YYYY-MM-DD HH24-MI-SS\')  ORDER BY datetime ASC'
+            print('getAllPAEvalues_query2_____',getAllPAEvalues_query2)
+            cursor.execute(getAllPAEvalues_query2)
+            PAEvalues2 = cursor.fetchall()
+            
+            print('Length_of_the_array____',len(PAEvalues2))
+            
+            for i in range(len(PAEvalues2)):
+                errorHourPAEvalues.append(PAEvalues2[i][0].strftime('%Y-%m-%d %H:%M:%S'))
+                errorActualPAEvalues.append(PAEvalues2[i][-1])
+                errorPredPAEvalues.append(PAEvalues2[i][-3])
+                
+                #! Store the predictions values
+                PredPAEvalues_48_1.append(PAEvalues2[i][-3])
+                PredPAEvalues_48_2.append(PAEvalues2[i][-5])
+                PredPAEvalues_48_3.append(PAEvalues2[i][-7])
+                PredPAEvalues_48_4.append(PAEvalues2[i][-9])
+                PredPAEvalues_48_5.append(PAEvalues2[i][-11])
+                PredPAEvalues_48_6.append(PAEvalues2[i][-13])
+                PredPAEvalues_48_7.append(PAEvalues2[i][-15])
+                PredPAEvalues_48_8.append(PAEvalues2[i][-17])
+                PredPAEvalues_48_9.append(PAEvalues2[i][-19])
+                PredPAEvalues_48_10.append(PAEvalues2[i][-21])
+                PredPAEvalues_48_11.append(PAEvalues2[i][-23])
+                PredPAEvalues_48_12.append(PAEvalues2[i][-25])
+                PredPAEvalues_48_13.append(PAEvalues2[i][-27])
+                PredPAEvalues_48_14.append(PAEvalues2[i][-29])
+                PredPAEvalues_48_15.append(PAEvalues2[i][-31])
+                PredPAEvalues_48_16.append(PAEvalues2[i][-33])
+                PredPAEvalues_48_17.append(PAEvalues2[i][-35])
+                PredPAEvalues_48_18.append(PAEvalues2[i][-37])
+                PredPAEvalues_48_19.append(PAEvalues2[i][-39])
+                PredPAEvalues_48_20.append(PAEvalues2[i][-41])
+                PredPAEvalues_48_21.append(PAEvalues2[i][-43])
+                PredPAEvalues_48_22.append(PAEvalues2[i][-45])
+                PredPAEvalues_48_23.append(PAEvalues2[i][-47])
+                PredPAEvalues_48_24.append(PAEvalues2[i][-49])
+
+                ErrPAEvalues48_1.append(PAEvalues2[i][-2])
+                ErrPAEvalues48_2.append(PAEvalues2[i][-4])
+                ErrPAEvalues48_3.append(PAEvalues2[i][-6])
+                ErrPAEvalues48_4.append(PAEvalues2[i][-8])
+                ErrPAEvalues48_5.append(PAEvalues2[i][-10])
+                ErrPAEvalues48_6.append(PAEvalues2[i][-12])
+                ErrPAEvalues48_7.append(PAEvalues2[i][-14])
+                ErrPAEvalues48_8.append(PAEvalues2[i][-16])
+                ErrPAEvalues48_9.append(PAEvalues2[i][-18])
+                ErrPAEvalues48_10.append(PAEvalues2[i][-20])
+                ErrPAEvalues48_11.append(PAEvalues2[i][-22])
+                ErrPAEvalues48_12.append(PAEvalues2[i][-24])
+                ErrPAEvalues48_13.append(PAEvalues2[i][-26])
+                ErrPAEvalues48_14.append(PAEvalues2[i][-28])
+                ErrPAEvalues48_15.append(PAEvalues2[i][-30])
+                ErrPAEvalues48_16.append(PAEvalues2[i][-32])
+                ErrPAEvalues48_17.append(PAEvalues2[i][-34])
+                ErrPAEvalues48_18.append(PAEvalues2[i][-36])
+                ErrPAEvalues48_19.append(PAEvalues2[i][-38])
+                ErrPAEvalues48_20.append(PAEvalues2[i][-40])
+                ErrPAEvalues48_21.append(PAEvalues2[i][-42])
+                ErrPAEvalues48_22.append(PAEvalues2[i][-44])
+                ErrPAEvalues48_23.append(PAEvalues2[i][-46])
+                ErrPAEvalues48_24.append(PAEvalues2[i][-48])
+                
+            print('PredPAEvalues24__48___',ErrPAEvalues48_24)
+            
+            #! Finding the mean root mean square error & mean absolute percentage error
+            e_lists = [
+                            PredPAEvalues_48_1,
+                            PredPAEvalues_48_2,
+                            PredPAEvalues_48_3,
+                            PredPAEvalues_48_4,
+                            PredPAEvalues_48_5,
+                            PredPAEvalues_48_6,
+                            PredPAEvalues_48_7,
+                            PredPAEvalues_48_8,
+                            PredPAEvalues_48_9,
+                            PredPAEvalues_48_10,
+                            PredPAEvalues_48_11,
+                            PredPAEvalues_48_12,
+                            PredPAEvalues_48_13,
+                            PredPAEvalues_48_14,
+                            PredPAEvalues_48_15,
+                            PredPAEvalues_48_16,
+                            PredPAEvalues_48_17,
+                            PredPAEvalues_48_18,
+                            PredPAEvalues_48_19,
+                            PredPAEvalues_48_20,
+                            PredPAEvalues_48_21,
+                            PredPAEvalues_48_22,
+                            PredPAEvalues_48_23,
+                            PredPAEvalues_48_24
+                        ]
+            actual_list = errorActualPAEvalues[1:25]
+            
+            for i, e_list in enumerate(e_lists):
+                squared_errors = [(actual - pred) ** 2 for actual, pred in zip(actual_list, e_list)]
+                rmse = np.sqrt(np.mean(squared_errors))
+                # rmse = rmse/100
+                # rmse_list.append(round(rmse, 2))
+                
+                
+                diff = max(actual_list) - min(actual_list)
+                if diff != 0:
+                    nrmse = (rmse/diff) *100
+                else: 
+                    nrmse = 0
+                print('Normalized_Root_Mean_Square_Error____',nrmse)
+                nrmse_list.append(round(nrmse,2))
+                
+                absolute_errors = [abs((actual - pred) / actual) for actual, pred in zip(actual_list, e_list)]
+                mape = np.mean(absolute_errors) * 100
+                mape_list.append(round(mape,2))
+    
+                absolute_errors = [abs(actual - pred) for actual, pred in zip(actual_list, e_list)]
+                mae = np.mean(absolute_errors)
+                # mae = mae/100
+                if diff != 0:
+                    nrmae = (mae/diff) *100
+                else: 
+                    nrmae = 0
+                print('Normalized_Root_Mean_Absolute_Error______',nrmae_list)
+                nrmae_list.append(round(nrmae, 2))
+
+            print('errorActualPAEvalues___',errorActualPAEvalues)
+            print('errorPredPAEvalues___',errorPredPAEvalues)                
+            
+            for i in range(1,25):
+                errorPredvalues_48_1.append(abs(errorActualPAEvalues[i] - PredPAEvalues_48_1[i]))
+                errorPredvalues_48_2.append(abs(errorActualPAEvalues[i] - PredPAEvalues_48_2[i]))
+                errorPredvalues_48_3.append(abs(errorActualPAEvalues[i] - PredPAEvalues_48_3[i]))
+                errorPredvalues_48_4.append(abs(errorActualPAEvalues[i] - PredPAEvalues_48_4[i]))
+                errorPredvalues_48_5.append(abs(errorActualPAEvalues[i] - PredPAEvalues_48_5[i]))
+                errorPredvalues_48_6.append(abs(errorActualPAEvalues[i] - PredPAEvalues_48_6[i]))
+                errorPredvalues_48_7.append(abs(errorActualPAEvalues[i] - PredPAEvalues_48_7[i]))
+                errorPredvalues_48_8.append(abs(errorActualPAEvalues[i] - PredPAEvalues_48_8[i]))
+                errorPredvalues_48_9.append(abs(errorActualPAEvalues[i] - PredPAEvalues_48_9[i]))
+                errorPredvalues_48_10.append(abs(errorActualPAEvalues[i] - PredPAEvalues_48_10[i]))
+                errorPredvalues_48_11.append(abs(errorActualPAEvalues[i] - PredPAEvalues_48_11[i]))
+                errorPredvalues_48_12.append(abs(errorActualPAEvalues[i] - PredPAEvalues_48_12[i]))
+                errorPredvalues_48_13.append(abs(errorActualPAEvalues[i] - PredPAEvalues_48_13[i]))
+                errorPredvalues_48_14.append(abs(errorActualPAEvalues[i] - PredPAEvalues_48_14[i]))
+                errorPredvalues_48_15.append(abs(errorActualPAEvalues[i] - PredPAEvalues_48_15[i]))
+                errorPredvalues_48_16.append(abs(errorActualPAEvalues[i] - PredPAEvalues_48_16[i]))
+                errorPredvalues_48_17.append(abs(errorActualPAEvalues[i] - PredPAEvalues_48_17[i]))
+                errorPredvalues_48_18.append(abs(errorActualPAEvalues[i] - PredPAEvalues_48_18[i]))
+                errorPredvalues_48_19.append(abs(errorActualPAEvalues[i] - PredPAEvalues_48_19[i]))
+                errorPredvalues_48_20.append(abs(errorActualPAEvalues[i] - PredPAEvalues_48_20[i]))
+                errorPredvalues_48_21.append(abs(errorActualPAEvalues[i] - PredPAEvalues_48_21[i]))
+                errorPredvalues_48_22.append(abs(errorActualPAEvalues[i] - PredPAEvalues_48_22[i]))
+                errorPredvalues_48_23.append(abs(errorActualPAEvalues[i] - PredPAEvalues_48_23[i]))
+                errorPredvalues_48_24.append(abs(errorActualPAEvalues[i] - PredPAEvalues_48_24[i]))
+            
+            print('ErrPredValues24_____',errorPredvalues_48_24)
+        
+        #! inserting/updating the values for dashboard charts
         for i in range(len(allPAEvalues)):
             allHourPAEvalues.append(
                 allPAEvalues[i][0].strftime('%Y-%m-%d %H:%M:%S'))
             allActualPAEvalues.append(allPAEvalues[i][-1])
             allPredPAEvalues.append(allPAEvalues[i][-3])
             allErrorPAEvalues.append(allPAEvalues[i][-2])
+
+        for i in range(len(allActualPAEvalues)):
+            predActualData.append(abs(allActualPAEvalues[i]-allPredPAEvalues[i]))
             
-        #! Insertion in status Array
-        for i in range(len(allPredPAEvalues)):
-            if allPredPAEvalues[i]>5000:
-                statusArray.append("Good")
-            elif allPredPAEvalues[i]<5000 and allPredPAEvalues[i]>1000:
-                statusArray.append("Moderate")
-            elif allPredPAEvalues[i]<1000 and allPredPAEvalues[i]>500:
-                statusArray.append("Poor")
-            elif allPredPAEvalues[i]<500:
-                statusArray.append("Extreamly Poor") 
+        print('allHourPAEvalues______',allHourPAEvalues)
+        print('allActualPAEvalues____',allActualPAEvalues)
+        print('allPredPAEvalues______',allPredPAEvalues)
+        print('allErrorPAEvalues_____',allErrorPAEvalues)
 
         dictAllPAE = {'h_all': allHourPAEvalues, 'a_all': allActualPAEvalues,
-                      'p_all': allPredPAEvalues, 'e_all': allErrorPAEvalues}
+                      'p_all': allPredPAEvalues, 'e_all': allErrorPAEvalues, 'predActualData':predActualData}
+        
         print("allHourPAEvalues", allHourPAEvalues)
 
         getPAEvalues_query = 'select * from ' + stn + '_PAE_'+fchr+' where datetime>=to_timestamp(\''+str(
@@ -1179,6 +1327,9 @@ def sendToFrontendhttp(stn, selectedDate, fchr, isPast):
         cursor.execute(getPAEvalues_query)
         print("getPAEvalues_query :", getPAEvalues_query)
         PAEvalues = cursor.fetchall()
+        
+        #! dataForStatusActual for storing actual values from the database
+        dataForStatusActual = []
                 
         currColumnIndx=3
 
@@ -1186,6 +1337,7 @@ def sendToFrontendhttp(stn, selectedDate, fchr, isPast):
             HourPAEvalues.append(
                 PAEvalues[i][0].strftime('%Y-%m-%d %H:%M:%S'))
             ActualPAEvalues.append(PAEvalues[i][-1])
+            dataForStatusActual.append(PAEvalues[i][-1])
 
             if PAEvalues[i][-currColumnIndx] != None:
                 PredPAEvalues.append(PAEvalues[i][-currColumnIndx])
@@ -1193,82 +1345,220 @@ def sendToFrontendhttp(stn, selectedDate, fchr, isPast):
                 currColumnIndx += 2
                 PredPAEvalues.append(PAEvalues[i][-currColumnIndx])
             #PredPAEvalues.append(PAEvalues[i][-3])
-            if fchr == '6hr':
-                ErrPAEvalues1.append(PAEvalues[i][-4])
-                ErrPAEvalues2.append(PAEvalues[i][-8])
-                ErrPAEvalues3.append(PAEvalues[i][-12])
-                ErrPAEvalues4.append(PAEvalues[i][-16])
-                ErrPAEvalues5.append(PAEvalues[i][-20])
-                ErrPAEvalues6.append(PAEvalues[i][-24])
-            elif fchr == '48hr':
-                ErrPAEvalues1.append(PAEvalues[i][-2])
-                ErrPAEvalues2.append(PAEvalues[i][-12])
-                ErrPAEvalues3.append(PAEvalues[i][-20])
-                ErrPAEvalues4.append(PAEvalues[i][-30])
-                ErrPAEvalues5.append(PAEvalues[i][-40])
-                ErrPAEvalues6.append(PAEvalues[i][-48])
-                
+            # if fchr == '6hr':
+            #     ErrPAEvalues1.append(PAEvalues[i][-2])
+            #     ErrPAEvalues2.append(PAEvalues[i][-4])
+            #     ErrPAEvalues3.append(PAEvalues[i][-6])
+            #     ErrPAEvalues4.append(PAEvalues[i][-8])
+            #     ErrPAEvalues5.append(PAEvalues[i][-10])
+            #     ErrPAEvalues6.append(PAEvalues[i][-12])
+            #     ErrPAEvalues7.append(PAEvalues[i][-14])
+            #     ErrPAEvalues8.append(PAEvalues[i][-16])
+            #     ErrPAEvalues9.append(PAEvalues[i][-18])
+            #     ErrPAEvalues10.append(PAEvalues[i][-20])
+            #     ErrPAEvalues11.append(PAEvalues[i][-22])
+            #     ErrPAEvalues12.append(PAEvalues[i][-24])
+            # elif fchr == '48hr':
+            #     ErrPAEvalues1.append(PAEvalues[i][-2])
+            #     ErrPAEvalues2.append(PAEvalues[i][-4])
+            #     ErrPAEvalues3.append(PAEvalues[i][-6])
+            #     ErrPAEvalues4.append(PAEvalues[i][-8])
+            #     ErrPAEvalues5.append(PAEvalues[i][-10])
+            #     ErrPAEvalues6.append(PAEvalues[i][-12])
+            #     ErrPAEvalues7.append(PAEvalues[i][-14])
+            #     ErrPAEvalues8.append(PAEvalues[i][-16])
+            #     ErrPAEvalues9.append(PAEvalues[i][-18])
+            #     ErrPAEvalues10.append(PAEvalues[i][-20])
+            #     ErrPAEvalues11.append(PAEvalues[i][-22])
+            #     ErrPAEvalues12.append(PAEvalues[i][-24])
+            #     ErrPAEvalues13.append(PAEvalues[i][-26])
+            #     ErrPAEvalues14.append(PAEvalues[i][-28])
+            #     ErrPAEvalues15.append(PAEvalues[i][-30])
+            #     ErrPAEvalues16.append(PAEvalues[i][-32])
+            #     ErrPAEvalues17.append(PAEvalues[i][-34])
+            #     ErrPAEvalues18.append(PAEvalues[i][-36])
+            #     ErrPAEvalues19.append(PAEvalues[i][-38])
+            #     ErrPAEvalues20.append(PAEvalues[i][-40])
+            #     ErrPAEvalues21.append(PAEvalues[i][-42])
+            #     ErrPAEvalues22.append(PAEvalues[i][-44])
+            #     ErrPAEvalues23.append(PAEvalues[i][-46])
+            #     ErrPAEvalues24.append(PAEvalues[i][-48])
+
+        #! Creating list to store the prediction, datetime, pred/actual difference and status
+        statusPrediction = []
+        statusDatetime = []
+        statusData = []
+        
+        #! Remove the dataForStatusActual none value 
+        dataForStatusActual = [x for x in dataForStatusActual if x is not None]
+        print('dataForStatusActual____',dataForStatusActual)
+        print('ErrPAEvalues12____',ErrPAEvalues12)
+        print('ActualPAEvalues_______',ActualPAEvalues)
+        print('PredPAEvalues______',PredPAEvalues)
+        
         print('HourPAEvalues____',HourPAEvalues)
         
-        HourPAEvaluez = [text.split(' ')[1][:5] for text in HourPAEvalues]
         
-        #! Fchr legend values sending to the frontend
-        if fchr == '6hr':
-            values = values6
-            hoursOffset = 6
-            hoursOffset_RecentPAE = 3
-            fchr_legend = ['T-1', 'T-2', 'T-3', 'T-4', 'T-5', 'T-6']
+        if len(dataForStatusActual)==7:
+            if fchr == '6hr':
+                for i in range(7,19):
+                    statusDatetime.append(HourPAEvalues[i])
+                    statusPrediction.append(PredPAEvalues[i])
+                    if PredPAEvalues[i]>5000:
+                        statusData.append("Good")
+                    elif PredPAEvalues[i]<5000 and PredPAEvalues[i]>1000:
+                        statusData.append("Moderate")
+                    elif PredPAEvalues[i]<1000 and PredPAEvalues[i]>500:
+                        statusData.append("Poor")
+                    elif PredPAEvalues[i]<500:
+                        statusData.append("Extreamly Poor") 
+            else:
+                for i in range(7,31):
+                    statusDatetime.append(HourPAEvalues[i])
+                    statusPrediction.append(PredPAEvalues[i])
+                    if PredPAEvalues[i]>5000:
+                        statusData.append("Good")
+                    elif PredPAEvalues[i]<5000 and PredPAEvalues[i]>1000:
+                        statusData.append("Moderate")
+                    elif PredPAEvalues[i]<1000 and PredPAEvalues[i]>500:
+                        statusData.append("Poor")
+                    elif PredPAEvalues[i]<500:
+                        statusData.append("Extreamly Poor")
+        
+        elif len(dataForStatusActual)<7:
+            if fchr == '6hr':
+                for i in range(len(statusDatetime)):
+                    statusDatetime.append(HourPAEvalues[i])
+                    statusPrediction.append(PredPAEvalues[i])
+                    if PredPAEvalues[i]>5000:
+                        statusData.append("Good")
+                    elif PredPAEvalues[i]<5000 and PredPAEvalues[i]>1000:
+                        statusData.append("Moderate")
+                    elif PredPAEvalues[i]<1000 and PredPAEvalues[i]>500:
+                        statusData.append("Poor")
+                    elif PredPAEvalues[i]<500:
+                        statusData.append("Extreamly Poor") 
+            else:
+                for i in range(len(statusDatetime)):
+                    statusDatetime.append(HourPAEvalues[i])
+                    statusPrediction.append(PredPAEvalues[i])
+                    if PredPAEvalues[i]>5000:
+                        statusData.append("Good")
+                    elif PredPAEvalues[i]<5000 and PredPAEvalues[i]>1000:
+                        statusData.append("Moderate")
+                    elif PredPAEvalues[i]<1000 and PredPAEvalues[i]>500:
+                        statusData.append("Poor")
+                    elif PredPAEvalues[i]<500:
+                        statusData.append("Extreamly Poor")
 
+    
+        #! Creating an array of station and color such that it'll store the list 
+        stn_names = ['CDH','GKP','HND','SNG']
+        sng = []
+        cdh = []
+        hnd = []
+        gkp = []
+        
+        allData = {}
+        
+        if fchr == "6hr":
+            for i in range(len(stn_names)):
+                queryForFetchingData = 'select "pred(t-0.5)" from ' + stn_names[i] + '_PAE_'+fchr + \
+                ' where datetime<=to_timestamp(\''+str(th2) + \
+                '\', \'YYYY-MM-DD HH24-MI-SS\') and datetime >= to_timestamp(\''+str(th3) + \
+                '\', \'YYYY-MM-DD HH24-MI-SS\')  ORDER BY datetime ASC'
+                print('queryForFetchingData_______',queryForFetchingData)
+                cursor.execute(queryForFetchingData)
+                allPAEvalues = cursor.fetchall()
+                print('allPAEvalues_of______',allPAEvalues)
+
+                if stn_names[i] == 'CDH':
+                        cdh = [t[0] for t in allPAEvalues]
+                elif stn_names[i] == 'GKP':
+                        gkp =  [t[0] for t in allPAEvalues]
+                elif stn_names[i] == 'HND':
+                        hnd= [t[0] for t in allPAEvalues]
+                elif stn_names[i] == 'SNG':
+                        sng= [t[0] for t in allPAEvalues]
+        
+        elif fchr == "48hr":
+            for i in range(len(stn_names)):
+                queryForFetchingData = 'select "pred(t-2)" from ' + stn_names[i] + '_PAE_'+fchr + \
+                ' where datetime<=to_timestamp(\''+str(th2) + \
+                '\', \'YYYY-MM-DD HH24-MI-SS\') and datetime >= to_timestamp(\''+str(th3) + \
+                '\', \'YYYY-MM-DD HH24-MI-SS\')  ORDER BY datetime ASC'
+                print('queryForFetchingData_______',queryForFetchingData)
+                cursor.execute(queryForFetchingData)
+                allPAEvalues = cursor.fetchall()
+                print('allPAEvalues_of______',allPAEvalues)
+
+                if stn_names[i] == 'CDH':
+                        cdh = [t[0] for t in allPAEvalues]
+                elif stn_names[i] == 'GKP':
+                        gkp =  [t[0] for t in allPAEvalues]
+                elif stn_names[i] == 'HND':
+                        hnd= [t[0] for t in allPAEvalues]
+                elif stn_names[i] == 'SNG':
+                        sng= [t[0] for t in allPAEvalues]
+                    
+        
+        allData = {
+            "cdh": {'data':cdh},
+            "gkp": {'data':gkp},
+            "hnd": {'data':hnd},
+            "sng": {'data':sng} 
+        }
+        
+        print('allData_______',allData)
+        
+        for key, value in allData.items():
+            data = value['data']
+            color = ''
+            if any(d < 1000 for d in data):
+                color = 'red'
+            elif any(1000 <= d < 2000 for d in data):
+                color = 'orange'
+            else:
+                color = 'green'
+            value['color'] = color
+
+        sortedData = sorted(allData.items(), key=lambda x: sum(d < 1000 for d in x[1]['data']), reverse=True)
+        sortedAllData = {key: value for key, value in sortedData}
+        print('Status_sortedData______',sortedAllData)
+        #! Mean average error
+        
+        
+        # dictPAE = {'h_all': HourPAEvalues, 'a_all': ActualPAEvalues, 'p_all': PredPAEvalues, 
+        #             'e1_all': ErrPredValues1, 'e2_all': ErrPredValues2,'e3_all': ErrPredValues3,
+        #             'e4_all': ErrPredValues4,'e5_all': ErrPredValues5,'e6_all': ErrPredValues6, 'e7_all': ErrPredValues7,
+        #             'e8_all': ErrPredValues8,'e9_all': ErrPredValues9,'e10_all': ErrPredValues10,'e11_all': ErrPredValues11,'e12_all': ErrPredValues12,
+        #             'e13_all': ErrPredValues13,'e14_all': ErrPredValues14,'e15_all': ErrPredValues15,'e16_all': ErrPredValues16,'e17_all': ErrPredValues17,
+        #             'e18_all': ErrPredValues18,'e19_all': ErrPredValues19,'e20_all': ErrPredValues20,'e21_all': ErrPredValues21,'e22_all': ErrPredValues22,
+        #             'e23_all': ErrPredValues23,'e24_all': ErrPredValues24,
+        #             'statusDatetime':statusDatetime, 'statusPrediction':statusPrediction,'statusData':statusData, 'errorHourPAEvalues':errorHourPAEvalues[3:15],
+        #             'statusList':sortedAllData,'nrmae_list':nrmae_list, 'mape_list':mape_list, 'nrmse_list':nrmse_list, 'is48hr': is48hr
+        #             }
+        
+        if fchr == '6hr': 
+            dictPAE = {'h_all': HourPAEvalues, 'a_all': ActualPAEvalues, 'p_all': PredPAEvalues, 
+                    'e1_all': ErrPredValues1, 'e2_all': ErrPredValues2,'e3_all': ErrPredValues3,
+                    'e4_all': ErrPredValues4,'e5_all': ErrPredValues5,'e6_all': ErrPredValues6, 'e7_all': ErrPredValues7,
+                    'e8_all': ErrPredValues8,'e9_all': ErrPredValues9,'e10_all': ErrPredValues10,'e11_all': ErrPredValues11,'e12_all': ErrPredValues12,
+                    'statusDatetime':statusDatetime, 'statusPrediction':statusPrediction,'statusData':statusData, 'errorHourPAEvalues':errorHourPAEvalues[3:15],
+                    'statusList':sortedAllData,'nrmae_list':nrmae_list, 'mape_list':mape_list, 'nrmse_list':nrmse_list, 'is48hr': is48hr
+                    }
         elif fchr == '48hr':
-            values = values48
-            hoursOffset = 24
-            hoursOffset_RecentPAE = 12
-            fchr_legend = ['T-8', 'T-16', 'T-24', 'T-32', 'T-40', 'T-48']
-
-       #! Fetching the status of the future prediction (tried to handle it in the FE but it's not working there)
-        fchr_status = ""
-        if fchr== '6hr':
-            data= PredPAEvalues[-12:]
-            data = [value if value is not None else 0 for value in data]
-            print("Status______",data)
-            avg = int(sum(data)/len(data))
-            print("Average of____", avg)
-            if avg>=2000:
-                fchr_status = "Safe to fly"
-            elif avg>=500 and avg<2000:
-                fchr_status = "Fly with caution"
-            elif avg>=200 and avg<500:
-                fchr_status = "Not safe to fly"
-                
-        else:
-            data= PredPAEvalues[-24:]
-            data = [value if value is not None else 0 for value in data]
-            print("Status______",data)
-            avg = int(sum(data)/len(data))
-            print("Average of____", avg)
-            if avg>=2000:
-                fchr_status = "Safe to fly"
-            elif avg>=500 and avg<1000:
-                fchr_status = "Fly with caution"
-            elif avg>=200 and avg<500:
-                fchr_status = "Not safe to fly"
-        
-        #! Setting the color for the status
-        status_color= ""
-        if fchr_status == "Safe to fly":
-            status_color = "green"
-        elif fchr_status == "Fly with caution":
-            status_color = "orange"
-        elif fchr_status == "Not safe to fly":
-            status_color = "red"
-                
-        print("selected fchr_______",fchr_status)
-
-        dictPAE = {'h_all': HourPAEvaluez, 'a_all': ActualPAEvalues, 'p_all': PredPAEvalues, 
-                   'e1_all': ErrPAEvalues1, 'e2_all': ErrPAEvalues2,'e3_all': ErrPAEvalues3,
-                   'e4_all': ErrPAEvalues4,'e5_all': ErrPAEvalues5,'e6_all': ErrPAEvalues6, 
-                   'live_data_list6hr': list_of_sortedData_6hr, "live_data_list48hr":list_of_sortedData_48hr,
-                   "fchr_status": fchr_status, "status_color": status_color, "statusList6hr":statusColor_6hr, "statusList48hr":statusColor_48hr, "fchr_legend":fchr_legend, "statusArray":statusArray}
+            dictPAE = {'h_all': HourPAEvalues, 'a_all': ActualPAEvalues, 'p_all': PredPAEvalues, 
+                    'e_48_1_all': errorPredvalues_48_1, 'e_48_2_all': errorPredvalues_48_2,'e_48_3_all': errorPredvalues_48_3,
+                    'e_48_4_all': errorPredvalues_48_4,'e_48_5_all': errorPredvalues_48_5,'e_48_6_all': errorPredvalues_48_6, 'e_48_7_all': errorPredvalues_48_7,
+                    'e_48_8_all': errorPredvalues_48_8,'e_48_9_all': errorPredvalues_48_9,'e_48_10_all': errorPredvalues_48_10,'e_48_11_all': errorPredvalues_48_11,'e_48_12_all': errorPredvalues_48_12,
+                    'e_48_13_all': errorPredvalues_48_13,'e_48_14_all': errorPredvalues_48_14,'e_48_15_all': errorPredvalues_48_15,'e_48_16_all': errorPredvalues_48_16,'e_48_17_all': errorPredvalues_48_17,
+                    'e_48_18_all': errorPredvalues_48_18,'e_48_19_all': errorPredvalues_48_19,'e_48_20_all': errorPredvalues_48_20,'e_48_21_all': errorPredvalues_48_21,'e_48_22_all': errorPredvalues_48_22,
+                    'e_48_23_all': errorPredvalues_48_23,'e_48_24_all': errorPredvalues_48_24,
+                    'statusDatetime':statusDatetime, 'statusPrediction':statusPrediction,'statusData':statusData, 'errorHourPAEvalues':errorHourPAEvalues[3:15],
+                    'statusList':sortedAllData,'nrmae_list':nrmae_list, 'mape_list':mape_list, 'nrmse_list':nrmse_list, 'is48hr': is48hr
+                    }
+            
 
         print("PredPAEvalues :", PredPAEvalues)
         '''for i in range(values['fcValues']):
@@ -1410,12 +1700,10 @@ def sendToFrontend(stn, selectedDate, fchr, isPast):
     global socketFlag
     global values6
     global values48
-    global fchr_legend
-    # global allErrorValues
-    
-    print("The not HTTPs method called____________")
+    global is48hr
 
     try:
+        #print()
         fe_t1 = time.time()
 
         if stn == "Gorakhpur":
@@ -1452,18 +1740,18 @@ def sendToFrontend(stn, selectedDate, fchr, isPast):
             values = values6
             hoursOffset = 6
             hoursOffset_RecentPAE = 3
-            fchr_legend = ["T-6", "T-5", "T-4", "T-3", "T-2", "T-1"]
-            
+            is48hr = False
         elif fchr == '48hr':
             values = values48
             hoursOffset = 24
             hoursOffset_RecentPAE = 12
-            fchr_legend = ["T-48", "T-40", "T-32", "T-24", "T-16", "T-8"]
+            is48hr = True
 
         lh2_query = 'select max(datetime) from '+stn+'_pae_'+fchr
+        print('lh2_query______',lh2_query)
         cursor.execute(lh2_query)
         lh2 = cursor.fetchall()[0][0]
-        print('lh2____',lh2_query)
+        print('lh2____',lh2)
         th2 = lh2 - pd.DateOffset(hours=values['forecastHours'])
 
         th3 = th2 - pd.DateOffset(hours=hoursOffset)
@@ -1475,6 +1763,14 @@ def sendToFrontend(stn, selectedDate, fchr, isPast):
             '\', \'YYYY-MM-DD HH24-MI-SS\')  ORDER BY datetime DESC'
         
         print("getAllPAEvalues_query :", getAllPAEvalues_query)
+        '''
+        print(getAllPAEvalues_query)
+        print("fchr :", fchr)
+        print("lh2 :", lh2)
+        print("th2 :", th2)
+        print("th3 :", th3)
+        print("time_RecentPAE :", time_RecentPAE)
+        '''
         cursor.execute(getAllPAEvalues_query)
         allPAEvalues = cursor.fetchall()
 
@@ -1486,330 +1782,457 @@ def sendToFrontend(stn, selectedDate, fchr, isPast):
         HourPAEvalues = []
         ActualPAEvalues = []
         PredPAEvalues = []
+        
+        #! PAE values for the t-1 to t-24 error
+        errorActualPAEvalues = []
+        errorPredPAEvalues = []
+        errorHourPAEvalues = [] 
+        timeListPAEvalues = []
+        
+        
+        
+        #! Storing the error list 6hr
         ErrPAEvalues1 = []
         ErrPAEvalues2 = []
         ErrPAEvalues3 = []
         ErrPAEvalues4 = []
         ErrPAEvalues5 = []
         ErrPAEvalues6 = []
+        ErrPAEvalues7 = []
+        ErrPAEvalues8 = []
+        ErrPAEvalues9 = []
+        ErrPAEvalues10 = []
+        ErrPAEvalues11 = []
+        ErrPAEvalues12 = []
         
-        statusArray = []
+        #! Storing the error list for 48hrs
+        ErrPAEvalues48_1 = []
+        ErrPAEvalues48_2 = []
+        ErrPAEvalues48_3 = []
+        ErrPAEvalues48_4 = []
+        ErrPAEvalues48_5 = []
+        ErrPAEvalues48_6 = []
+        ErrPAEvalues48_7 = []
+        ErrPAEvalues48_8 = []
+        ErrPAEvalues48_9 = []
+        ErrPAEvalues48_10 = []
+        ErrPAEvalues48_11 = []
+        ErrPAEvalues48_12 = []
+        ErrPAEvalues48_13 = []
+        ErrPAEvalues48_14 = []
+        ErrPAEvalues48_15 = []
+        ErrPAEvalues48_16 = []
+        ErrPAEvalues48_17 = []
+        ErrPAEvalues48_18 = []
+        ErrPAEvalues48_19 = []
+        ErrPAEvalues48_20 = []
+        ErrPAEvalues48_21 = []
+        ErrPAEvalues48_22 = []
+        ErrPAEvalues48_23 = []
+        ErrPAEvalues48_24 = []
         
-        global min_error, max_error
         
-        #! Fetching the data for the average, absolute mean error
+        #! List to store the values of the predictions of 6hr
+        PredPAEvalues1 = []
+        PredPAEvalues2 = []
+        PredPAEvalues3 = []
+        PredPAEvalues4 = []
+        PredPAEvalues5 = []
+        PredPAEvalues6 = []
+        PredPAEvalues7 = []
+        PredPAEvalues8 = []
+        PredPAEvalues9 = []
+        PredPAEvalues10 = []
+        PredPAEvalues11 = []
+        PredPAEvalues12 = []
+        
+        #! List to store the values of the predictions of 48hr
+        PredPAEvalues_48_1 = []
+        PredPAEvalues_48_2 = []
+        PredPAEvalues_48_3 = []
+        PredPAEvalues_48_4 = []
+        PredPAEvalues_48_5 = []
+        PredPAEvalues_48_6 = []
+        PredPAEvalues_48_7 = []
+        PredPAEvalues_48_8 = []
+        PredPAEvalues_48_9 = []
+        PredPAEvalues_48_10 = []
+        PredPAEvalues_48_11 = []
+        PredPAEvalues_48_12 = []
+        PredPAEvalues_48_13 = []
+        PredPAEvalues_48_14 = []
+        PredPAEvalues_48_15 = []
+        PredPAEvalues_48_16 = []
+        PredPAEvalues_48_17 = []
+        PredPAEvalues_48_18 = []
+        PredPAEvalues_48_19 = []
+        PredPAEvalues_48_20 = []
+        PredPAEvalues_48_21 = []
+        PredPAEvalues_48_22 = []
+        PredPAEvalues_48_23 = []
+        PredPAEvalues_48_24 = []
+        
+        #! List to store the prediction actual values in the list for 6hrs
+        ErrPredValues1 = []
+        ErrPredValues2 = []
+        ErrPredValues3 = []
+        ErrPredValues4 = []
+        ErrPredValues5 = []
+        ErrPredValues6 = []
+        ErrPredValues7 = []
+        ErrPredValues8 = []
+        ErrPredValues9 = []
+        ErrPredValues10 = []
+        ErrPredValues11 = []
+        ErrPredValues12 = []
+        
+        #! List to store the prediciton in list for 48hrs
+        errorPredvalues_48_1 = []
+        errorPredvalues_48_2 = []
+        errorPredvalues_48_3 = []
+        errorPredvalues_48_4 = []
+        errorPredvalues_48_5 = []
+        errorPredvalues_48_6 = []
+        errorPredvalues_48_7 = []
+        errorPredvalues_48_8 = []
+        errorPredvalues_48_9 = []
+        errorPredvalues_48_10 = []
+        errorPredvalues_48_11 = []
+        errorPredvalues_48_12 = []
+        errorPredvalues_48_13 = []
+        errorPredvalues_48_14 = []
+        errorPredvalues_48_15 = []
+        errorPredvalues_48_16 = []
+        errorPredvalues_48_17 = []
+        errorPredvalues_48_18 = []
+        errorPredvalues_48_19 = []
+        errorPredvalues_48_20 = []
+        errorPredvalues_48_21 = []
+        errorPredvalues_48_22 = []
+        errorPredvalues_48_23 = []
+        errorPredvalues_48_24 = []
+        
+        
+        ErrPAEvalues = []
+        ErrPAEvalues = []
+        ErrPAEvalues = []
+        predActualData = []
+        
+        #! List to store the rmse and mape errors
+        mape_list = []
+        nrmse_list = []
+        nrmae_list = []
+        
+        #! Getting values for the t-1 to t-12 error table
         if fchr == '6hr':
-            # Fetching the min error value in the given table
-            getMinValues = 'SELECT "pred(t-0.5)" AS Prediction, "actual(t)" AS Actual ' + \
-            'FROM (SELECT "pred(t-0.5)", "actual(t)" ' + \
-            'FROM ' + stn + '_PAE_6HR' +' WHERE "error(t-0.5)" = (SELECT MIN("error(t-0.5)") FROM '+ stn +  '_PAE_6HR' +') ' + \
-            'ORDER BY rownum) WHERE rownum = 1'
-            cursor.execute(getMinValues)
-            allMinValues= cursor.fetchall()   
-            min_err1, min_err2 = allMinValues[0]
-            min_error = int(abs(min_err1-min_err2))
-            print('allMinValues_______',min_error)
-                        
-            # Fetching the max error value in the given table
-            getMaxValues = 'SELECT "pred(t-0.5)" AS Prediction, "actual(t)" AS Actual ' + \
-            'FROM (SELECT "pred(t-0.5)", "actual(t)" ' + \
-            'FROM ' + stn +  '_PAE_6HR' +' WHERE "error(t-0.5)" = (SELECT MAX("error(t-0.5)") FROM '+ stn +  '_PAE_6HR' +  ') ' + \
-            'ORDER BY rownum) WHERE rownum = 1'
-            cursor.execute(getMaxValues)
-            allMaxValues=cursor.fetchall()
-            max_err1, max_err2 = allMaxValues[0]
-            max_error = int(abs(max_err1-max_err2))
-            
-            # Average mean error
-            dataForAvgMeanError = 'SELECT "pred(t-0.5)" AS Prediction, "actual(t)" AS Actual ' +\
-                                  'FROM (SELECT * FROM ' + stn +  '_PAE_6HR ' +\
-                                        'WHERE "actual(t)" IS NOT NULL '+\
-                                        'ORDER BY datetime DESC) WHERE ROWNUM <=12'
-            cursor.execute(dataForAvgMeanError)
-            allValuesForMeanError = cursor.fetchall()
-            print("allValuesForMeanError_______",allValuesForMeanError)
+            # lh2 = cursor.fetchall()[0][0]
+            # th2 = lh2 - pd.DateOffset(hours=values['forecastHours'])
+            print('inside 6hr error')
+            th2_adjusted = th2 - pd.DateOffset(hours=0)
+            th3_adjusted = th3 - pd.DateOffset(hours=1)
 
-            value1 = [int(x[0]) for x in allValuesForMeanError]
-            value2 = [int(x[1]) for x in allValuesForMeanError]
+            print('th2____', th2_adjusted)
+            print('th3____', th3_adjusted)
 
-            print('meanAvgError1______',value1)
-            print('meanAvgError2______',value2)
-            
-            mainList = []
+            time_RecentPAE = th2_adjusted - pd.DateOffset(hours=hoursOffset_RecentPAE)
+            print('time_RecentPAE____', time_RecentPAE)
 
-            # Getting the absolute difference of prediction and actual
-            for i in range(len(value1)):
-                mainList.append(abs(value1[i]-value2[i]))
-            
-            absolute_values = [abs(x) for x in mainList]  # Calculate the absolute values
-            sum_absolute_values = sum(absolute_values)  # Find the sum of absolute values
-            mean_average = sum_absolute_values / len(mainList)  # Calculate the mean average
-            mean_average = round(mean_average,2)
-            print("Total absolute mean average:", mean_average)
-                            
-                        
-        elif fchr == '48hr':
-            # Fetching the min error value in the given table
-            getMinValues = 'SELECT "pred(t-2)" AS Prediction, "actual(t)" AS Actual ' + \
-            'FROM (SELECT "pred(t-2)", "actual(t)" ' + \
-            'FROM ' + stn +  '_PAE_48HR' + ' WHERE "error(t-2)" = (SELECT MIN("error(t-2)") FROM ' + stn +  '_PAE_48HR' +') ' + \
-            'ORDER BY rownum) WHERE rownum = 1'
-            cursor.execute(getMinValues)
-            allMinValues= cursor.fetchall()   
-            print('allMinValues_______',allMinValues)
-            min_err1, min_err2 = allMinValues[0]
-            min_error = int(abs(min_err1-min_err2))
-               
-            # Fetching the max error value in the given table             
-            getMaxValues = 'SELECT "pred(t-2)" AS Prediction, "actual(t)" AS Actual ' + \
-            'FROM (SELECT "pred(t-2)", "actual(t)" ' + \
-            'FROM ' + stn +  '_PAE_48HR' +' WHERE "error(t-2)" = (SELECT MAX("error(t-2)") FROM ' + stn +  '_PAE_48HR' +') ' + \
-            'ORDER BY rownum) WHERE rownum = 1'
-            cursor.execute(getMaxValues)
-            allMaxValues = cursor.fetchall()
-            print("allMaxValues______",allMaxValues)
-            max_err1, max_err2 = allMaxValues[0]
-            max_error = int(abs(max_err1-max_err2))
-            
-            # Average mean error
-            dataForAvgMeanError =   'SELECT "pred(t-0.5)" AS Prediction, "actual(t)" AS Actual ' +\
-                                    'FROM (SELECT * FROM ' + stn +  '_PAE_48HR ' +\
-                                    'WHERE "actual(t)" IS NOT NULL'+\
-                                    'ORDER BY datetime DESC) WHERE ROWNUM <=12'
-            cursor.execute(dataForAvgMeanError)
-            allValuesForMeanError = cursor.fetchall()
-            print("allValuesForMeanError_______",allValuesForMeanError)
-            value1 = [int(x[0]) for x in allValuesForMeanError]
-            value2 = [int(x[1]) for x in allValuesForMeanError]
-            
-            print('meanAvgError1______',value1)
-            print('meanAvgError2______',value2)
-            
-            mainList = []
+            getAllPAEvalues_query2 = "SELECT * FROM " + stn + "_PAE_" + fchr + \
+                                    " WHERE datetime >= to_timestamp('" + str(th3_adjusted) + \
+                                    "', 'YYYY-MM-DD HH24-MI-SS') AND datetime <= to_timestamp('" + str(th2_adjusted) + \
+                                    "', 'YYYY-MM-DD HH24-MI-SS') ORDER BY datetime ASC"
 
-            # Getting the absolute difference of prediction and actual
-            for i in range(len(value1)):
-                mainList.append(abs(value1[i]-value2[i]))
+            print('getAllPAEvalues_query2_____WS',getAllPAEvalues_query2)
+            cursor.execute(getAllPAEvalues_query2)
+            PAEvalues2 = cursor.fetchall()
             
-            absolute_values = [abs(x) for x in mainList]  # Calculate the absolute values
-            sum_absolute_values = sum(absolute_values)  # Find the sum of absolute values
-            mean_average = sum_absolute_values / len(mainList)  # Calculate the mean average
-            mean_average = round(mean_average,2)
-            print("Total absolute mean average:", mean_average)
-                                            
-                        
-        
-        #! Fetching the data for status
-        allStatus_Data = []
-        stn_name_list = [x.replace(" ", '') for x in config.get('stnTableName', 'list').split(',')]
-        stn_name_list_6hr = [x.replace(" ", '') for x in config.get('stnTableName', 'list6hr').split(',')]
-        stn_name_list_48hr = [x.replace(" ", '') for x in config.get('stnTableName', 'list48hr').split(',')]
-        pred_6hr_list = []
-        pred_48hr_list = []
-        allPredValues = []
-
-        dateQuery6 = """
-                    SELECT datetime
-                    FROM (
-                    SELECT datetime
-                    FROM gkp_pae_6hr
-                    WHERE "actual(t)" IS NOT NULL
-                    ORDER BY datetime DESC
-                    )
-                    WHERE ROWNUM = 1
-                    """        
-        cursor.execute(dateQuery6)
-        lh6 = cursor.fetchall()
-        lh6 = lh6[0][0]
-        formatted_datetime6 = lh6.strftime('%Y-%m-%d %H:%M:%S')
-        
-        
-        dateQuery48 = """
-                    SELECT datetime
-                    FROM (
-                    SELECT datetime
-                    FROM gkp_pae_48hr
-                    WHERE "actual(t)" IS NOT NULL
-                    ORDER BY datetime DESC
-                    )
-                    WHERE ROWNUM = 1
-                    """
-        cursor.execute(dateQuery48)
-        lh48 = cursor.fetchall()
-        lh48 = lh48[0][0]
-        formatted_datetime48 = lh48.strftime('%Y-%m-%d %H:%M:%S')
-        
-        print('lh6_____',formatted_datetime6)
-        print('lh48____',formatted_datetime48)
-        
-        for i in range(len(stn_name_list_6hr)):
-            temp = []
-            getAllPAEvalues_query = 'select * from ' + stn_name_list_6hr[i] + '_PAE_'+ '6hr' + \
-            ' where datetime=to_timestamp(\''+str(formatted_datetime6) + \
-            '\', \'YYYY-MM-DD HH24-MI-SS\') ORDER BY datetime DESC'
-            print('fetch_data_6hr_______', getAllPAEvalues_query)
-            cursor.execute(getAllPAEvalues_query)
-            allPredValues = cursor.fetchall()
-            print('allPredValues________',allPredValues)
-            for j in range(1,25,2):
-                k=0
-                temp.append(allPredValues[k][j])
-                k+=1
-            pred_6hr_list.append(temp)
+            for i in range(len(PAEvalues2)):
+                errorHourPAEvalues.append(PAEvalues2[i][0].strftime('%Y-%m-%d %H:%M:%S'))
+                errorActualPAEvalues.append(PAEvalues2[i][-1])
+                errorPredPAEvalues.append(PAEvalues2[i][-3])
                 
-        for i in range(len(stn_name_list_48hr)):
-            temp = []
-            getAllPAEvalues_query = 'select * from ' + stn_name_list_48hr[i] + '_PAE_'+'48hr' + \
-            ' where datetime=to_timestamp(\''+str(formatted_datetime48) + \
-            '\', \'YYYY-MM-DD HH24-MI-SS\') ORDER BY datetime DESC'
-            print('fetch_data_48hr_______',getAllPAEvalues_query)
-            cursor.execute(getAllPAEvalues_query)
-            allPredValues = cursor.fetchall()
-            print('allPredValues48_______',allPredValues)
-            for j in range(1,49,2):
-                k = 0
-                temp.append(allPredValues[k][j])
-                k+=1
-            pred_48hr_list.append(temp)
-        
-        print('pred_6hr_list____',pred_6hr_list)
-        print('pred_48hr_list____',pred_48hr_list)
-        
-        
-        #! Run the arrays individually to see if there is any visibility value lesser than the recommended visibility 
-        statusColor_6hr = ['green','green','green','green']
-
-        statusColor_48hr = ['green','green','green','green']
-
-        for i in range(len(pred_6hr_list)):
-            for j in range(12):
-                if pred_6hr_list[i][j] is not None and pred_6hr_list[i][j]<=1000:
-                    statusColor_6hr[i] = 'red'
-                    
-        for i in range(len(pred_48hr_list)):
-            for j in range(24):
-                if pred_48hr_list[i][j]<=1000:
-                    statusColor_48hr[i] = 'red'
-            
-        print('statusColor_6hr____',statusColor_6hr)
-        print('statusColor_48hr___',statusColor_48hr)
-        
-        
-        print('stn_name_list________',stn_name_list)
-        # stn_name_48HR = ["GKP_PAE_48HR","SNG_PAE_48HR","HND_PAE_48HR","CDH_PAE_48HR"]
-        
-        for i in range(len(stn_name_list)):
-            liveData6HR = []
-            if i <4:
-                status_value_6hr =" SELECT \"error(t-1.0)\" FROM ("+\
-                " SELECT \"error(t-1.0)\" FROM " + stn_name_list[i] + " WHERE DATETIME <= " +\
-                "(SELECT MAX(DATETIME) FROM " + stn_name_list[i] + " WHERE \"error(t-1.0)\" IS NOT NULL) ORDER BY DATETIME DESC) WHERE ROWNUM <= 6"
-                cursor.execute(status_value_6hr)
-                live_6hr = cursor.fetchall()
-                for j in range(len(live_6hr)):
-                    liveData6HR.append(live_6hr[j][0])
-            
-            else:
-                status_value_48hr = " SELECT \"error(t-2)\" FROM ("+\
-                " SELECT \"error(t-2)\" FROM " + stn_name_list[i] + " WHERE DATETIME <= " +\
-                "(SELECT MAX(DATETIME) FROM " + stn_name_list[i] + " WHERE \"error(t-2)\" IS NOT NULL) ORDER BY DATETIME DESC) WHERE ROWNUM <= 6"
-                cursor.execute(status_value_48hr)
-                live_48hr = cursor.fetchall()
-                for j in range(len(live_48hr)):
-                    liveData6HR.append(live_48hr[j][0])
-            
-            allStatus_Data.append(liveData6HR)
-        
-        print('allStatus_Data_______',allStatus_Data)
-        
-            
-        #! Make the list of the error station and the last actual value
-        average = []
-        for arr in allStatus_Data:
-            avg=sum(arr)/len(arr)
-            average.append(avg)
-            
-        part1 = average[:4]
-        part2 = average[4:]
-
-        # Create two dictionaries to store the results
-        dict1 = {"Gorakhpur": part1[0], "Srinagar": part1[1], "Hindan": part1[2], "Chandigarh": part1[3]}
-        dict2 = {"Gorakhpur": part2[0], "Srinagar": part2[1], "Hindan": part2[2], "Chandigarh": part2[3]}
-            
-        # Print the results
-        print("The dictonary data 1____",dict1)
-        print("The dictonary data 2____",dict2)
-        
-        dict1_rounded = {k: round(v, 2) for k, v in dict1.items()}
-        dict2_rounded = {k: round(v, 2) for k, v in dict2.items()}
-        
-        sorted_dict1 = {k: v for k, v in sorted(dict1_rounded.items(), key=lambda item: item[1], reverse=False)}
-        sorted_dict2 = {k: v for k, v in sorted(dict2_rounded.items(), key=lambda item: item[1], reverse=False)}
-        
-        
-        
-        print('The rounded Values1_________',list(sorted_dict1.keys()))
-        print('The rounded Values2_________',list(sorted_dict2.keys()))
-        print('The rounded Values1_________',list(sorted_dict1.values()))
-        print('The rounded Values2_________',list(sorted_dict2.values()))
-
-        list_sortedColor1 = list(sorted_dict1.values())
-        list_sortedColor2 = list(sorted_dict2.values())
-        
-        send_color1 = ["","","",""]
-        send_color2 = ["","","",""]
-        
-        for i in range(len(list_sortedColor1)):
-            if list_sortedColor1[i] < 50:
-                send_color1[i] = "green"
-            elif list_sortedColor1[i]>40 and list_sortedColor1[i]<400:
-                send_color1[i] = "#e0d100"
-            else:
-                send_color1[i] = "red" 
+                #! Store the predictions values
+                PredPAEvalues1.append(PAEvalues2[i][-3])
+                PredPAEvalues2.append(PAEvalues2[i][-5])
+                PredPAEvalues3.append(PAEvalues2[i][-7])
+                PredPAEvalues4.append(PAEvalues2[i][-9])
+                PredPAEvalues5.append(PAEvalues2[i][-11])
+                PredPAEvalues6.append(PAEvalues2[i][-13])
+                PredPAEvalues7.append(PAEvalues2[i][-15])
+                PredPAEvalues8.append(PAEvalues2[i][-17])
+                PredPAEvalues9.append(PAEvalues2[i][-19])
+                PredPAEvalues10.append(PAEvalues2[i][-21])
+                PredPAEvalues11.append(PAEvalues2[i][-23])
+                PredPAEvalues12.append(PAEvalues2[i][-25])
                 
-        for i in range(len(list_sortedColor1)):
-            if list_sortedColor2[i] < 50:
-                send_color2[i] = "green"
-            elif list_sortedColor2[i]>40 and list_sortedColor1[i]<400:
-                send_color2[i] = "#e0d100"
-            else:
-                send_color2[i] = "red" 
-        
-        list_of_sortedData_6hr = list(sorted_dict1.keys())
-        list_of_sortedData_48hr = list(sorted_dict2.keys())
-        
-        print("LIVEtEST________________--",allStatus_Data)
+                
+                #! Store the error values
+                ErrPAEvalues1.append(PAEvalues2[i][-2])
+                ErrPAEvalues2.append(PAEvalues2[i][-4])
+                ErrPAEvalues3.append(PAEvalues2[i][-6])
+                ErrPAEvalues4.append(PAEvalues2[i][-8])
+                ErrPAEvalues5.append(PAEvalues2[i][-10])
+                ErrPAEvalues6.append(PAEvalues2[i][-12])
+                ErrPAEvalues7.append(PAEvalues2[i][-14])
+                ErrPAEvalues8.append(PAEvalues2[i][-16])
+                ErrPAEvalues9.append(PAEvalues2[i][-18])
+                ErrPAEvalues10.append(PAEvalues2[i][-20])
+                ErrPAEvalues11.append(PAEvalues2[i][-22])
+                ErrPAEvalues12.append(PAEvalues2[i][-24])
             
+
+            # print('errorPredPAEvalues___',errorPredPAEvalues)
+            
+            #! Difference of actual vs predictions and storing them in a list
+            
+            for i in range(3,15):
+                ErrPredValues1.append(abs(errorActualPAEvalues[i] - PredPAEvalues1[i]))
+                ErrPredValues2.append(abs(errorActualPAEvalues[i] - PredPAEvalues2[i]))
+                ErrPredValues3.append(abs(errorActualPAEvalues[i] - PredPAEvalues3[i]))
+                ErrPredValues4.append(abs(errorActualPAEvalues[i] - PredPAEvalues4[i]))
+                ErrPredValues5.append(abs(errorActualPAEvalues[i] - PredPAEvalues5[i]))
+                ErrPredValues6.append(abs(errorActualPAEvalues[i] - PredPAEvalues6[i]))
+                ErrPredValues7.append(abs(errorActualPAEvalues[i] - PredPAEvalues7[i]))
+                ErrPredValues8.append(abs(errorActualPAEvalues[i] - PredPAEvalues8[i]))
+                ErrPredValues9.append(abs(errorActualPAEvalues[i] - PredPAEvalues9[i]))
+                ErrPredValues10.append(abs(errorActualPAEvalues[i] - PredPAEvalues10[i]))
+                ErrPredValues11.append(abs(errorActualPAEvalues[i] - PredPAEvalues11[i]))
+                ErrPredValues12.append(abs(errorActualPAEvalues[i] - PredPAEvalues12[i]))
+
+            print('ErrPredValues12_insideWS____',ErrPredValues1)
+            print('PredPAEvalues1__6___insideWS',PredPAEvalues1)
+            print('errorActualPAEvalues___insideWS',errorActualPAEvalues)
+
+            
+            #! Finding the mean root mean square error & mean absolute percentage error
+            e_lists = [PredPAEvalues1,PredPAEvalues1,PredPAEvalues2,PredPAEvalues3,PredPAEvalues4,PredPAEvalues5,PredPAEvalues6,PredPAEvalues7,PredPAEvalues8,PredPAEvalues9,PredPAEvalues10,PredPAEvalues11,PredPAEvalues12]
+            actual_list = errorActualPAEvalues[3:15]
+            
+            for i, e_list in enumerate(e_lists):
+                squared_errors = [(actual - pred) ** 2 for actual, pred in zip(actual_list, e_list)]
+                rmse = np.sqrt(np.mean(squared_errors))
+                # rmse = rmse/100
+                # rmse_list.append(round(rmse, 2))
+                
+                
+                diff = max(actual_list) - min(actual_list)
+                if diff != 0:
+                    nrmse = (rmse/diff) *100
+                else: 
+                    nrmse = 0
+                print('Normalized_Root_Mean_Square_Error____',nrmse)
+                nrmse_list.append(round(nrmse,2))
+                
+                absolute_errors = [abs((actual - pred) / actual) for actual, pred in zip(actual_list, e_list)]
+                mape = np.mean(absolute_errors) * 100
+                mape_list.append(round(mape,2))
+    
+                absolute_errors = [abs(actual - pred) for actual, pred in zip(actual_list, e_list)]
+                mae = np.mean(absolute_errors)
+                # mae = mae/100
+                if diff != 0:
+                    nrmae = (mae/diff) *100
+                else: 
+                    nrmae = 0
+                print('Normalized_Root_Mean_Absolute_Error______',nrmae_list)
+                nrmae_list.append(round(nrmae, 2))
+
+            print('rmse_list___',mape_list)
+            print('nrmse_list___',nrmse_list)
+            print('mrmae_list___',nrmae_list)
+            is48hr = False
         
-        # print('stn_name_6HR_____________',stn_name_6HR)
-        # print('stn_name_48HR____________',stn_name_48HR)
-        
-        
-        
-        #! Insertion of data to their respective array
+        #! Getting the values for t-1 to t-24 values
+        if fchr == '48hr':
+            print('inside 48hr error')
+            # lh2 = cursor.fetchall()[0][0]
+            # th2 = lh2 - pd.DateOffset(hours=values['forecastHours'])
+            th2_adjusted = th2 - pd.DateOffset(days=0)  # Subtract one day
+
+            th3 = th2 - pd.DateOffset(hours=hoursOffset)
+            th3_adjusted =th3 -  pd.DateOffset(days=1)  # Subtract one day
+
+            print('th2____', th2)
+            print('th3____', th3)
+            time_RecentPAE = th2 - pd.DateOffset(hours=hoursOffset_RecentPAE)
+
+            print('time_RecentPAE____', time_RecentPAE)
+
+            getAllPAEvalues_query2 = 'select * from ' + stn + '_PAE_' + fchr + \
+                        ' where datetime>=to_timestamp(\'' + str(th3_adjusted) + \
+                        '\', \'YYYY-MM-DD HH24-MI-SS\') and datetime<=to_timestamp(\'' + str(th2_adjusted) + \
+                        '\', \'YYYY-MM-DD HH24-MI-SS\')  ORDER BY datetime ASC'
+            print('getAllPAEvalues_query2_____',getAllPAEvalues_query2)
+            cursor.execute(getAllPAEvalues_query2)
+            PAEvalues2 = cursor.fetchall()
+            
+            print('Length_of_the_array____',len(PAEvalues2))
+            
+            for i in range(len(PAEvalues2)):
+                errorHourPAEvalues.append(PAEvalues2[i][0].strftime('%Y-%m-%d %H:%M:%S'))
+                errorActualPAEvalues.append(PAEvalues2[i][-1])
+                errorPredPAEvalues.append(PAEvalues2[i][-3])
+                
+                #! Store the predictions values
+                PredPAEvalues_48_1.append(PAEvalues2[i][-3])
+                PredPAEvalues_48_2.append(PAEvalues2[i][-5])
+                PredPAEvalues_48_3.append(PAEvalues2[i][-7])
+                PredPAEvalues_48_4.append(PAEvalues2[i][-9])
+                PredPAEvalues_48_5.append(PAEvalues2[i][-11])
+                PredPAEvalues_48_6.append(PAEvalues2[i][-13])
+                PredPAEvalues_48_7.append(PAEvalues2[i][-15])
+                PredPAEvalues_48_8.append(PAEvalues2[i][-17])
+                PredPAEvalues_48_9.append(PAEvalues2[i][-19])
+                PredPAEvalues_48_10.append(PAEvalues2[i][-21])
+                PredPAEvalues_48_11.append(PAEvalues2[i][-23])
+                PredPAEvalues_48_12.append(PAEvalues2[i][-25])
+                PredPAEvalues_48_13.append(PAEvalues2[i][-27])
+                PredPAEvalues_48_14.append(PAEvalues2[i][-29])
+                PredPAEvalues_48_15.append(PAEvalues2[i][-31])
+                PredPAEvalues_48_16.append(PAEvalues2[i][-33])
+                PredPAEvalues_48_17.append(PAEvalues2[i][-35])
+                PredPAEvalues_48_18.append(PAEvalues2[i][-37])
+                PredPAEvalues_48_19.append(PAEvalues2[i][-39])
+                PredPAEvalues_48_20.append(PAEvalues2[i][-41])
+                PredPAEvalues_48_21.append(PAEvalues2[i][-43])
+                PredPAEvalues_48_22.append(PAEvalues2[i][-45])
+                PredPAEvalues_48_23.append(PAEvalues2[i][-47])
+                PredPAEvalues_48_24.append(PAEvalues2[i][-49])
+
+                ErrPAEvalues48_1.append(PAEvalues2[i][-2])
+                ErrPAEvalues48_2.append(PAEvalues2[i][-4])
+                ErrPAEvalues48_3.append(PAEvalues2[i][-6])
+                ErrPAEvalues48_4.append(PAEvalues2[i][-8])
+                ErrPAEvalues48_5.append(PAEvalues2[i][-10])
+                ErrPAEvalues48_6.append(PAEvalues2[i][-12])
+                ErrPAEvalues48_7.append(PAEvalues2[i][-14])
+                ErrPAEvalues48_8.append(PAEvalues2[i][-16])
+                ErrPAEvalues48_9.append(PAEvalues2[i][-18])
+                ErrPAEvalues48_10.append(PAEvalues2[i][-20])
+                ErrPAEvalues48_11.append(PAEvalues2[i][-22])
+                ErrPAEvalues48_12.append(PAEvalues2[i][-24])
+                ErrPAEvalues48_13.append(PAEvalues2[i][-26])
+                ErrPAEvalues48_14.append(PAEvalues2[i][-28])
+                ErrPAEvalues48_15.append(PAEvalues2[i][-30])
+                ErrPAEvalues48_16.append(PAEvalues2[i][-32])
+                ErrPAEvalues48_17.append(PAEvalues2[i][-34])
+                ErrPAEvalues48_18.append(PAEvalues2[i][-36])
+                ErrPAEvalues48_19.append(PAEvalues2[i][-38])
+                ErrPAEvalues48_20.append(PAEvalues2[i][-40])
+                ErrPAEvalues48_21.append(PAEvalues2[i][-42])
+                ErrPAEvalues48_22.append(PAEvalues2[i][-44])
+                ErrPAEvalues48_23.append(PAEvalues2[i][-46])
+                ErrPAEvalues48_24.append(PAEvalues2[i][-48])
+                
+            print('PredPAEvalues24__48___',ErrPAEvalues48_24)
+
+            print('errorActualPAEvalues___',errorActualPAEvalues)
+            print('errorPredPAEvalues___',errorPredPAEvalues)                
+            
+            for i in range(1,25):
+                errorPredvalues_48_1.append(abs(errorActualPAEvalues[i] - PredPAEvalues_48_1[i]))
+                errorPredvalues_48_2.append(abs(errorActualPAEvalues[i] - PredPAEvalues_48_2[i]))
+                errorPredvalues_48_3.append(abs(errorActualPAEvalues[i] - PredPAEvalues_48_3[i]))
+                errorPredvalues_48_4.append(abs(errorActualPAEvalues[i] - PredPAEvalues_48_4[i]))
+                errorPredvalues_48_5.append(abs(errorActualPAEvalues[i] - PredPAEvalues_48_5[i]))
+                errorPredvalues_48_6.append(abs(errorActualPAEvalues[i] - PredPAEvalues_48_6[i]))
+                errorPredvalues_48_7.append(abs(errorActualPAEvalues[i] - PredPAEvalues_48_7[i]))
+                errorPredvalues_48_8.append(abs(errorActualPAEvalues[i] - PredPAEvalues_48_8[i]))
+                errorPredvalues_48_9.append(abs(errorActualPAEvalues[i] - PredPAEvalues_48_9[i]))
+                errorPredvalues_48_10.append(abs(errorActualPAEvalues[i] - PredPAEvalues_48_10[i]))
+                errorPredvalues_48_11.append(abs(errorActualPAEvalues[i] - PredPAEvalues_48_11[i]))
+                errorPredvalues_48_12.append(abs(errorActualPAEvalues[i] - PredPAEvalues_48_12[i]))
+                errorPredvalues_48_13.append(abs(errorActualPAEvalues[i] - PredPAEvalues_48_13[i]))
+                errorPredvalues_48_14.append(abs(errorActualPAEvalues[i] - PredPAEvalues_48_14[i]))
+                errorPredvalues_48_15.append(abs(errorActualPAEvalues[i] - PredPAEvalues_48_15[i]))
+                errorPredvalues_48_16.append(abs(errorActualPAEvalues[i] - PredPAEvalues_48_16[i]))
+                errorPredvalues_48_17.append(abs(errorActualPAEvalues[i] - PredPAEvalues_48_17[i]))
+                errorPredvalues_48_18.append(abs(errorActualPAEvalues[i] - PredPAEvalues_48_18[i]))
+                errorPredvalues_48_19.append(abs(errorActualPAEvalues[i] - PredPAEvalues_48_19[i]))
+                errorPredvalues_48_20.append(abs(errorActualPAEvalues[i] - PredPAEvalues_48_20[i]))
+                errorPredvalues_48_21.append(abs(errorActualPAEvalues[i] - PredPAEvalues_48_21[i]))
+                errorPredvalues_48_22.append(abs(errorActualPAEvalues[i] - PredPAEvalues_48_22[i]))
+                errorPredvalues_48_23.append(abs(errorActualPAEvalues[i] - PredPAEvalues_48_23[i]))
+                errorPredvalues_48_24.append(abs(errorActualPAEvalues[i] - PredPAEvalues_48_24[i]))
+            
+            #! Finding the mean root mean square error & mean absolute percentage error
+            e_lists = [
+                            PredPAEvalues_48_1,
+                            PredPAEvalues_48_2,
+                            PredPAEvalues_48_3,
+                            PredPAEvalues_48_4,
+                            PredPAEvalues_48_5,
+                            PredPAEvalues_48_6,
+                            PredPAEvalues_48_7,
+                            PredPAEvalues_48_8,
+                            PredPAEvalues_48_9,
+                            PredPAEvalues_48_10,
+                            PredPAEvalues_48_11,
+                            PredPAEvalues_48_12,
+                            PredPAEvalues_48_13,
+                            PredPAEvalues_48_14,
+                            PredPAEvalues_48_15,
+                            PredPAEvalues_48_16,
+                            PredPAEvalues_48_17,
+                            PredPAEvalues_48_18,
+                            PredPAEvalues_48_19,
+                            PredPAEvalues_48_20,
+                            PredPAEvalues_48_21,
+                            PredPAEvalues_48_22,
+                            PredPAEvalues_48_23,
+                            PredPAEvalues_48_24
+                        ]
+            
+            actual_list = errorActualPAEvalues[1:25]
+            
+            for i, e_list in enumerate(e_lists):
+                squared_errors = [(actual - pred) ** 2 for actual, pred in zip(actual_list, e_list)]
+                rmse = np.sqrt(np.mean(squared_errors))
+                # rmse = rmse/100
+                # rmse_list.append(round(rmse, 2))
+                
+                
+                diff = max(actual_list) - min(actual_list)
+                if diff != 0:
+                    nrmse = (rmse/diff) *100
+                else: 
+                    nrmse = 0
+                print('Normalized_Root_Mean_Square_Error____',nrmse)
+                nrmse_list.append(round(nrmse,2))
+                
+                absolute_errors = [abs((actual - pred) / actual) for actual, pred in zip(actual_list, e_list)]
+                mape = np.mean(absolute_errors) * 100
+                mape_list.append(round(mape,2))
+    
+                absolute_errors = [abs(actual - pred) for actual, pred in zip(actual_list, e_list)]
+                mae = np.mean(absolute_errors)
+                # mae = mae/100
+                if diff != 0:
+                    nrmae = (mae/diff) *100
+                else: 
+                    nrmae = 0
+                print('Normalized_Root_Mean_Absolute_Error______',nrmae_list)
+                nrmae_list.append(round(nrmae, 2))
+                
+            print('ErrPredValues24_____',errorPredvalues_48_24)
+
         for i in range(len(allPAEvalues)):
             allHourPAEvalues.append(
                 allPAEvalues[i][0].strftime('%Y-%m-%d %H:%M:%S'))
             allActualPAEvalues.append(allPAEvalues[i][-1])
             allPredPAEvalues.append(allPAEvalues[i][-3])
             allErrorPAEvalues.append(allPAEvalues[i][-2])
-        
-        print("allPredPAEvalues______",allPredPAEvalues)
-
-        #! Insertion in status Array
-        for i in range(len(allPredPAEvalues)):
-            if allPredPAEvalues[i]>5000:
-                statusArray.append("Good")
-            elif allPredPAEvalues[i]<5000 and allPredPAEvalues[i]>1000:
-                statusArray.append("Moderate")
-            elif allPredPAEvalues[i]<1000 and allPredPAEvalues[i]>500:
-                statusArray.append("Poor")
-            elif allPredPAEvalues[i]<500:
-                statusArray.append("Extreamly Poor")
-
+            
+        for i in range(len(allActualPAEvalues)):
+            predActualData.append(abs(allActualPAEvalues[i]-allPredPAEvalues[i]))
+            
+        print('allHourPAEvalues______',allHourPAEvalues)
+        print('allActualPAEvalues____',allActualPAEvalues)
+        print('allPredPAEvalues______',allPredPAEvalues)
+        print('allErrorPAEvalues_____',allErrorPAEvalues)
 
         dictAllPAE = {'h_all': allHourPAEvalues, 'a_all': allActualPAEvalues,
-                      'p_all': allPredPAEvalues, 'e_all': allErrorPAEvalues,}
+                      'p_all': allPredPAEvalues, 'e_all': allErrorPAEvalues, 'predActualData':predActualData}
         
         print("allHourPAEvalues", allHourPAEvalues)
         getPAEvalues_query = 'select * from ' + stn + '_PAE_'+fchr+' where datetime>=to_timestamp(\''+str(
@@ -1819,12 +2242,18 @@ def sendToFrontend(stn, selectedDate, fchr, isPast):
         cursor.execute(getPAEvalues_query)
         PAEvalues = cursor.fetchall()
         
+        #! dataForStatusActual for storing actual values from the database
+        dataForStatusActual = []
+        
         currColumnIndx = 3
+        
+        #! Fetching the HoursPAE, PredPAE and ErrPAE 
                 
         for i in range(len(PAEvalues)):
             HourPAEvalues.append(
                 PAEvalues[i][0].strftime('%Y-%m-%d %H:%M:%S'))
             ActualPAEvalues.append(PAEvalues[i][-1])
+            dataForStatusActual.append(PAEvalues[i][-1])
 
             if PAEvalues[i][-currColumnIndx] != None:
                 PredPAEvalues.append(PAEvalues[i][-currColumnIndx])
@@ -1833,75 +2262,222 @@ def sendToFrontend(stn, selectedDate, fchr, isPast):
                 PredPAEvalues.append(PAEvalues[i][-currColumnIndx])
             #PredPAEvalues.append(PAEvalues[i][-3])
 
-            if fchr == '6hr':
-                ErrPAEvalues1.append(PAEvalues[i][-4])
-                ErrPAEvalues2.append(PAEvalues[i][-8])
-                ErrPAEvalues3.append(PAEvalues[i][-12])
-                ErrPAEvalues4.append(PAEvalues[i][-16])
-                ErrPAEvalues5.append(PAEvalues[i][-20])
-                ErrPAEvalues6.append(PAEvalues[i][-24])
-            elif fchr == '48hr':
-                ErrPAEvalues1.append(PAEvalues[i][-8])
-                ErrPAEvalues2.append(PAEvalues[i][-16])
-                ErrPAEvalues3.append(PAEvalues[i][-24])
-                ErrPAEvalues4.append(PAEvalues[i][-32])
-                ErrPAEvalues5.append(PAEvalues[i][-40])
-                ErrPAEvalues6.append(PAEvalues[i][-48])
+            # if fchr == '6hr':
+            #     ErrPAEvalues1.append(PAEvalues[i][-2])
+            #     ErrPAEvalues2.append(PAEvalues[i][-4])
+            #     ErrPAEvalues3.append(PAEvalues[i][-6])
+            #     ErrPAEvalues4.append(PAEvalues[i][-8])
+            #     ErrPAEvalues5.append(PAEvalues[i][-10])
+            #     ErrPAEvalues6.append(PAEvalues[i][-12])
+            #     ErrPAEvalues7.append(PAEvalues[i][-14])
+            #     ErrPAEvalues8.append(PAEvalues[i][-16])
+            #     ErrPAEvalues9.append(PAEvalues[i][-18])
+            #     ErrPAEvalues10.append(PAEvalues[i][-20])
+            #     ErrPAEvalues11.append(PAEvalues[i][-22])
+            #     ErrPAEvalues12.append(PAEvalues[i][-24])
+            # elif fchr == '48hr':
+            #     ErrPAEvalues1.append(PAEvalues[i][-2])
+            #     ErrPAEvalues2.append(PAEvalues[i][-4])
+            #     ErrPAEvalues3.append(PAEvalues[i][-6])
+            #     ErrPAEvalues4.append(PAEvalues[i][-8])
+            #     ErrPAEvalues5.append(PAEvalues[i][-10])
+            #     ErrPAEvalues6.append(PAEvalues[i][-12])
+            #     ErrPAEvalues7.append(PAEvalues[i][-14])
+            #     ErrPAEvalues8.append(PAEvalues[i][-16])
+            #     ErrPAEvalues9.append(PAEvalues[i][-18])
+            #     ErrPAEvalues10.append(PAEvalues[i][-20])
+            #     ErrPAEvalues11.append(PAEvalues[i][-22])
+            #     ErrPAEvalues12.append(PAEvalues[i][-24])
+            #     ErrPAEvalues13.append(PAEvalues[i][-26])
+            #     ErrPAEvalues14.append(PAEvalues[i][-28])
+            #     ErrPAEvalues15.append(PAEvalues[i][-30])
+            #     ErrPAEvalues16.append(PAEvalues[i][-32])
+            #     ErrPAEvalues17.append(PAEvalues[i][-34])
+            #     ErrPAEvalues18.append(PAEvalues[i][-36])
+            #     ErrPAEvalues19.append(PAEvalues[i][-38])
+            #     ErrPAEvalues20.append(PAEvalues[i][-40])
+            #     ErrPAEvalues21.append(PAEvalues[i][-42])
+            #     ErrPAEvalues22.append(PAEvalues[i][-44])
+            #     ErrPAEvalues23.append(PAEvalues[i][-46])
+            #     ErrPAEvalues24.append(PAEvalues[i][-48])
+                
+            
+        
+       #! Creating list to store the prediction, datetime, pred/actual difference and status
+        statusPrediction = []
+        statusDatetime = []
+        statusData = []
+        
+        #! Remove the dataForStatusActual none value 
+        dataForStatusActual = [x for x in dataForStatusActual if x is not None]
+        print('dataForStatusActual____',dataForStatusActual)
+        
+        print('ErrPAEvalues12____',ErrPAEvalues12)
+        print('ActualPAEvalues_______',ActualPAEvalues)
+        print('PredPAEvalues______',PredPAEvalues)
         
         print('HourPAEvalues____',HourPAEvalues)
         
-        HourPAEvaluez = [text.split(' ')[1][:5] for text in HourPAEvalues]
-                
-        #! Fetching the status of the future prediction (tried to handle it in the FE but it's not working there)
-        print('PredPAEvalues_________',PredPAEvalues)
-        fchr_status = ""
-        if fchr== '6hr':
-            status= PredPAEvalues[:12]
-            print("Status______",status)
-            avg = sum(status)/len(status)
-            print("Average of____", avg)
-            if avg>=2000:
-                fchr_status = "Safe to fly"
-            elif avg>=500 and avg<2000:
-                fchr_status = "Fly with caution"
-            elif avg>=200 and avg<500:
-                fchr_status = "Not safe to fly"
-                
-        else:
-            status= PredPAEvalues[-24:]
-            print("Status______",status)
-            avg = sum(status)/len(status)
-            print("Average of____", avg)
-            if avg>=2000:
-                fchr_status = "Safe to fly"
-            elif avg>=500 and avg<1000:
-                fchr_status = "Fly with caution"
-            elif avg>=200 and avg<500:
-                fchr_status = "Not safe to fly"
-            
-            
-        #! Setting the color for the status
-        status_color= ""
-        if fchr_status == "Safe to fly":
-            status_color = "green"
-        elif fchr_status == "Fly with caution":
-            status_color = "orange"
-        elif fchr_status == "Not safe to fly":
-            status_color = "red"
-                
-        print("selected fchr_______",fchr_status)
         
-        if fchr=="48hr" :
-            HourPAEvaluez = HourPAEvaluez[:19]
-            PredPAEvalues = PredPAEvalues[:19]
+        if len(dataForStatusActual)==7:
+            if fchr == '6hr':
+                for i in range(7,19):
+                    statusDatetime.append(HourPAEvalues[i])
+                    statusPrediction.append(PredPAEvalues[i])
+                    if PredPAEvalues[i]>5000:
+                        statusData.append("Good")
+                    elif PredPAEvalues[i]<5000 and PredPAEvalues[i]>1000:
+                        statusData.append("Moderate")
+                    elif PredPAEvalues[i]<1000 and PredPAEvalues[i]>500:
+                        statusData.append("Poor")
+                    elif PredPAEvalues[i]<500:
+                        statusData.append("Extreamly Poor") 
+            else:
+                for i in range(7,31):
+                    statusDatetime.append(HourPAEvalues[i])
+                    statusPrediction.append(PredPAEvalues[i])
+                    if PredPAEvalues[i]>5000:
+                        statusData.append("Good")
+                    elif PredPAEvalues[i]<5000 and PredPAEvalues[i]>1000:
+                        statusData.append("Moderate")
+                    elif PredPAEvalues[i]<1000 and PredPAEvalues[i]>500:
+                        statusData.append("Poor")
+                    elif PredPAEvalues[i]<500:
+                        statusData.append("Extreamly Poor")
+        
+        elif len(dataForStatusActual)<7:
+            if fchr == '6hr':
+                for i in range(len(statusDatetime)):
+                    statusDatetime.append(HourPAEvalues[i])
+                    statusPrediction.append(PredPAEvalues[i])
+                    if PredPAEvalues[i]>5000:
+                        statusData.append("Good")
+                    elif PredPAEvalues[i]<5000 and PredPAEvalues[i]>1000:
+                        statusData.append("Moderate")
+                    elif PredPAEvalues[i]<1000 and PredPAEvalues[i]>500:
+                        statusData.append("Poor")
+                    elif PredPAEvalues[i]<500:
+                        statusData.append("Extreamly Poor") 
+            else:
+                for i in range(len(statusDatetime)):
+                    statusDatetime.append(HourPAEvalues[i])
+                    statusPrediction.append(PredPAEvalues[i])
+                    if PredPAEvalues[i]>5000:
+                        statusData.append("Good")
+                    elif PredPAEvalues[i]<5000 and PredPAEvalues[i]>1000:
+                        statusData.append("Moderate")
+                    elif PredPAEvalues[i]<1000 and PredPAEvalues[i]>500:
+                        statusData.append("Poor")
+                    elif PredPAEvalues[i]<500:
+                        statusData.append("Extreamly Poor")
 
-        dictPAE = {'h_all': HourPAEvaluez, 'a_all': ActualPAEvalues, 'p_all': PredPAEvalues, 
-                   'e1_all': ErrPAEvalues1, 'e2_all': ErrPAEvalues2,'e3_all': ErrPAEvalues3,
-                   'e4_all': ErrPAEvalues4,'e5_all': ErrPAEvalues5,'e6_all': ErrPAEvalues6, 
-                   'live_data_list6hr': list_of_sortedData_6hr, "live_data_list48hr":list_of_sortedData_48hr,
-                   "fchr_status": fchr_status, "status_color": status_color, "statusList6hr":statusColor_6hr, 
-                   "statusList48hr":statusColor_48hr, "fchr_legend":fchr_legend, "statusArray":statusArray, 
-                   "min_error":min_error, "max_error":max_error, "mean_average":mean_average}
+        #! Creating an array of station and color such that it'll store the list 
+        stn_names = ['CDH','GKP','HND','SNG']
+        sng = []
+        cdh = []
+        hnd = []
+        gkp = []
+        
+        allData = {}
+        
+        if fchr == "6hr":
+            for i in range(len(stn_names)):
+                queryForFetchingData = 'select "pred(t-0.5)" from ' + stn_names[i] + '_PAE_'+fchr + \
+                ' where datetime<=to_timestamp(\''+str(th2) + \
+                '\', \'YYYY-MM-DD HH24-MI-SS\') and datetime >= to_timestamp(\''+str(th3) + \
+                '\', \'YYYY-MM-DD HH24-MI-SS\')  ORDER BY datetime ASC'
+                print('queryForFetchingData_______',queryForFetchingData)
+                cursor.execute(queryForFetchingData)
+                allPAEvalues = cursor.fetchall()
+                print('allPAEvalues_of______',allPAEvalues)
+
+                if stn_names[i] == 'CDH':
+                        cdh = [t[0] for t in allPAEvalues]
+                elif stn_names[i] == 'GKP':
+                        gkp =  [t[0] for t in allPAEvalues]
+                elif stn_names[i] == 'HND':
+                        hnd= [t[0] for t in allPAEvalues]
+                elif stn_names[i] == 'SNG':
+                        sng= [t[0] for t in allPAEvalues]
+        
+        elif fchr == "48hr":
+            for i in range(len(stn_names)):
+                queryForFetchingData = 'select "pred(t-2)" from ' + stn_names[i] + '_PAE_'+fchr + \
+                ' where datetime<=to_timestamp(\''+str(th2) + \
+                '\', \'YYYY-MM-DD HH24-MI-SS\') and datetime >= to_timestamp(\''+str(th3) + \
+                '\', \'YYYY-MM-DD HH24-MI-SS\')  ORDER BY datetime ASC'
+                print('queryForFetchingData_______',queryForFetchingData)
+                cursor.execute(queryForFetchingData)
+                allPAEvalues = cursor.fetchall()
+                print('allPAEvalues_of______',allPAEvalues)
+
+                if stn_names[i] == 'CDH':
+                        cdh = [t[0] for t in allPAEvalues]
+                elif stn_names[i] == 'GKP':
+                        gkp =  [t[0] for t in allPAEvalues]
+                elif stn_names[i] == 'HND':
+                        hnd= [t[0] for t in allPAEvalues]
+                elif stn_names[i] == 'SNG':
+                        sng= [t[0] for t in allPAEvalues]
+                    
+        
+        allData = {
+            "cdh": {'data':cdh},
+            "gkp": {'data':gkp},
+            "hnd": {'data':hnd},
+            "sng": {'data':sng} 
+        }
+        
+        print('allData_______',allData)
+        
+        for key, value in allData.items():
+            data = value['data']
+            color = ''
+            if any(d < 1000 for d in data):
+                color = 'red'
+            elif any(1000 <= d < 2000 for d in data):
+                color = 'orange'
+            else:
+                color = 'green'
+            value['color'] = color
+
+        sortedData = sorted(allData.items(), key=lambda x: sum(d < 1000 for d in x[1]['data']), reverse=True)
+        sortedAllData = {key: value for key, value in sortedData}
+        print('Status_sortedData______',sortedAllData)
+
+        #! Mean average error
+        
+        # dictPAE = {'h_all': HourPAEvalues, 'a_all': ActualPAEvalues, 'p_all': PredPAEvalues, 
+        #             'e1_all': ErrPredValues1, 'e2_all': ErrPredValues2,'e3_all': ErrPredValues3,
+        #             'e4_all': ErrPredValues4,'e5_all': ErrPredValues5,'e6_all': ErrPredValues6, 'e7_all': ErrPredValues7,
+        #             'e8_all': ErrPredValues8,'e9_all': ErrPredValues9,'e10_all': ErrPredValues10,'e11_all': ErrPredValues11,'e12_all': ErrPredValues12,
+        #             'e13_all': ErrPredValues13,'e14_all': ErrPredValues14,'e15_all': ErrPredValues15,'e16_all': ErrPredValues16,'e17_all': ErrPredValues17,
+        #             'e18_all': ErrPredValues18,'e19_all': ErrPredValues19,'e20_all': ErrPredValues20,'e21_all': ErrPredValues21,'e22_all': ErrPredValues22,
+        #             'e23_all': ErrPredValues23,'e24_all': ErrPredValues24,
+        #             'statusDatetime':statusDatetime, 'statusPrediction':statusPrediction,'statusData':statusData, 'errorHourPAEvalues':errorHourPAEvalues[3:15],
+        #             'statusList':sortedAllData,'nrmae_list':nrmae_list, 'mape_list':mape_list, 'nrmse_list':nrmse_list, 'is48hr': is48hr
+        #             }
+        
+        if fchr == '6hr': 
+            dictPAE = {'h_all': HourPAEvalues, 'a_all': ActualPAEvalues, 'p_all': PredPAEvalues, 
+                    'e1_all': ErrPredValues1, 'e2_all': ErrPredValues2,'e3_all': ErrPredValues3,
+                    'e4_all': ErrPredValues4,'e5_all': ErrPredValues5,'e6_all': ErrPredValues6, 'e7_all': ErrPredValues7,
+                    'e8_all': ErrPredValues8,'e9_all': ErrPredValues9,'e10_all': ErrPredValues10,'e11_all': ErrPredValues11,'e12_all': ErrPredValues12,
+                    'statusDatetime':statusDatetime, 'statusPrediction':statusPrediction,'statusData':statusData, 'errorHourPAEvalues':errorHourPAEvalues[3:15],
+                    'statusList':sortedAllData,'nrmae_list':nrmae_list, 'mape_list':mape_list, 'nrmse_list':nrmse_list, 'is48hr': is48hr
+                    }
+        elif fchr == '48hr':
+           dictPAE = {'h_all': HourPAEvalues, 'a_all': ActualPAEvalues, 'p_all': PredPAEvalues, 
+                    'e_48_1_all': errorPredvalues_48_1, 'e_48_2_all': errorPredvalues_48_2,'e_48_3_all': errorPredvalues_48_3,
+                    'e_48_4_all': errorPredvalues_48_4,'e_48_5_all': errorPredvalues_48_5,'e_48_6_all': errorPredvalues_48_6, 'e_48_7_all': errorPredvalues_48_7,
+                    'e_48_8_all': errorPredvalues_48_8,'e_48_9_all': errorPredvalues_48_9,'e_48_10_all': errorPredvalues_48_10,'e_48_11_all': errorPredvalues_48_11,'e_48_12_all': errorPredvalues_48_12,
+                    'e_48_13_all': errorPredvalues_48_13,'e_48_14_all': errorPredvalues_48_14,'e_48_15_all': errorPredvalues_48_15,'e_48_16_all': errorPredvalues_48_16,'e_48_17_all': errorPredvalues_48_17,
+                    'e_48_18_all': errorPredvalues_48_18,'e_48_19_all': errorPredvalues_48_19,'e_48_20_all': errorPredvalues_48_20,'e_48_21_all': errorPredvalues_48_21,'e_48_22_all': errorPredvalues_48_22,
+                    'e_48_23_all': errorPredvalues_48_23,'e_48_24_all': errorPredvalues_48_24,
+                    'statusDatetime':statusDatetime, 'statusPrediction':statusPrediction,'statusData':statusData, 'errorHourPAEvalues':errorHourPAEvalues[3:15],
+                    'statusList':sortedAllData,'nrmae_list':nrmae_list, 'mape_list':mape_list, 'nrmse_list':nrmse_list, 'is48hr': is48hr
+                    }
+            
 
         print("PredPAEvalues :", PredPAEvalues)
         '''
@@ -1931,7 +2507,6 @@ def sendToFrontend(stn, selectedDate, fchr, isPast):
                 ' where TRUNC(datetime) = to_timestamp(\''+str(selectedDateFormatted) + \
                 '\', \'YYYY-MM-DD HH24-MI-SS\') ORDER BY datetime ASC'
             # getSelectedPAEvalues_query= 'select * from ' + stn + '_PAE_'+fchr+' where TRUNC(datetime) =\''+str(selectedDateFormatted)+'\' ORDER BY datetime ASC'
-            # print(getSelectedPAEvalues_query)
             cursor.execute(getSelectedPAEvalues_query)
             selectedPAEvalues = cursor.fetchall()
 
@@ -1969,6 +2544,9 @@ def sendToFrontend(stn, selectedDate, fchr, isPast):
 
         th2_before = (th2 - pd.DateOffset(days=values['reduction']))
         th2_time = str(th2.hour)+str(th2.minute).zfill(2)
+
+        #print("Manish th2_before :", th2_before)
+        #print("Manish th2_time :", th2)
 
         th2_before_date = str(th2_before.year).zfill(
             4)+'-'+str(th2_before.month).zfill(2)+'-'+str(th2_before.day).zfill(2)
@@ -2029,18 +2607,26 @@ def sendToFrontend(stn, selectedDate, fchr, isPast):
         if connection:
             connection.close()
             
+#! Search Data for Past Data 
 @app.route('/searchData', methods=['POST'])
 def searchData():
     try :
 
         global start_date
         global end_date
+        global is48hr
 
         avp_DateTime = []
         avp_Actual = []
         avp_Pred = []
         avp_Err = []
+        
+        
+        
 
+        # stn = "Gorakhpur"
+        # fchr = "48HR"
+        
         data = request.data
         start_date = json.loads(data)["dateArray"][0]
         print('Start_data_________',start_date)
@@ -2102,17 +2688,30 @@ def searchData():
             
         sendDict = []
         
+        errInMts = []
+        
+        #! Getting the error in mts
+        for i in range(len(avp_Actual)):
+            errInMts.append(abs(avp_Actual[i] - avp_Pred[i]))
+        
         for i in range(len(avp_Actual)):
             data = {
                 'datetime':avp_DateTime[i],
                 'actual': avp_Actual[i],
                 'predic': avp_Pred[i],
-                'error': avp_Err[i]
+                'error': errInMts[i]
             }
             sendDict.append(data)
+            
+        if fchr == '48hr':
+            is48hr = True
+        else: 
+            is48hr = False
+            
+        print("allTableData____",sendDict)
 
         dictAVP = {'Datetime': avp_DateTime, 'Actual': avp_Actual,
-                   'Prediction': avp_Pred, 'Error': avp_Err, 'sendDict':sendDict}
+                   'Prediction': avp_Pred, 'Error': avp_Err, 'allTableData':sendDict, 'is48hr':is48hr}
         
         
         
@@ -2125,9 +2724,87 @@ def searchData():
             cursor.close()
         if connection:
             connection.close()
-    
+            
+            
+#! API to fetch the data for the error table ("t-1 to t-12" or "t-2 to t-48")
+@app.route('/fetchErrorData', methods=['POST'])
+def fetchErrorData():
+    try: 
+        
+        global start_date
+        global end_date
+        global is48hr
+        
+        avp_DateTime = []
+        avp_Pred = []
+        avp_Err = []
+        
+        data = request.data
+        start_date = json.loads(data)["startDate"]
+        end_date = json.loads(data)["endDate"]
+        fchr = json.loads(data)["fchr"]
+        stn = json.loads(data)["stn"]
+        errTableName = json.loads(data)["errTableName"]
+        
+        #! Convert the station name
+        if stn == "Gorakhpur":
+            stn = 'GKP'
+        elif stn == "Srinagar":
+            stn = 'SNG'
+        elif stn == "Hindan":
+            stn = 'HND'
+        elif stn == "Chandigarh":
+            stn = 'CDH'
+        
+        #! Connect DB
+        connection = cx_Oracle.connect(
+            user=db_user, password=db_password, dsn=dsn, encoding=db_encoding)
+        cursor = connection.cursor()
+        
+        #! query to fetch data
+        fetchData = "select " + '"errTableName" '+ "from " + stn + "_PAE_" + fchr
 
+        print("FetchData____",fetchData)
+        cursor.execute(fetchData)
+        
+        avp_Values = cursor.fetchall()
+        
+        
+        for i in range(len(avp_Values)):
+            avp_DateTime.append(
+                avp_Values[i][0].strftime('%Y-%m-%d %H:%M:%S'))
+            avp_Pred.append(avp_Values[i][2])
+            avp_Err.append(abs(avp_Values[i][3]))
+            
+        dictAVP = { "datetime": avp_DateTime, "pred": avp_Pred, "error": avp_Err}
 
+        
+        return json.dumps({ "dictAllData": dictAVP})
+        
+    except Exception as ex: 
+        print('Error_for_Table___',ex)
+        
+    finally:
+        # print()
+        if cursor:
+            cursor.close()
+        if connection:
+            connection.close()
+            
+            
+# @app.route('/searchDataForTable', methods=['POST'])
+# def searchDataForTable():
+#     try: 
+#         connection = cx_Oracle.connect(
+#             user=db_user, password=db_password, dsn=dsn, encoding=db_encoding)
+#         cursor = connection.cursor()
+        
+        
+        
+        
+#     except Exception as arr:
+#         print('Error___',arr)
+        
 
 # function which fetches list of stations and forecast hours available in the db to display for selection
 @app.route('/selectCity', methods=['GET'])
@@ -2136,8 +2813,6 @@ def selectCity():
         connection = cx_Oracle.connect(
             user=db_user, password=db_password, dsn=dsn, encoding=db_encoding)
         cursor = connection.cursor()
-        print("Select City Manish__________________________________")
-
         cityQuery = 'select city_name from cities'
         cursor.execute(cityQuery)
         city_list = cursor.fetchall()
@@ -2356,7 +3031,7 @@ def getInitialPredictions():
     # print("stn_selected : ", stn_selected)
     # print("date_selected : ", date_selected)
     # print("fchr_selected : ", fchr_selected)
-    print("isPast : ", isPast)
+    # print("isPast : ", isPast)
 
     initialhttpData = sendToFrontendhttp(
         stn_selected, date_selected, fchr_selected, isPast)
@@ -2395,8 +3070,8 @@ def sendData(ws):
                 print("ws started ___________________________________")
                 ws.send(p_data)
                 print("p_data :", p_data)
+                socketFlag = False
                 t1_ws = time.time()
-                # socketFlag=False
                 print("ws over ___________________________________")
                 # print("Time elapsed for ws: ", t1_ws-t0_ws) # CPU seconds elapsed (floating point)
             gevent.sleep(1)
@@ -2423,11 +3098,11 @@ def getLatestRec_COMP_IDEX4(_oraQueryFilter):
                     "WHEN index_no = 10 THEN 'CDH' "\
                     "WHEN index_no = 17 THEN 'HND' ELSE 'GKP' END ) AS stn_name, "\
                     "dd, t, gggg, ddd, ff, fmfm, round(vv, 0) as VV, ww, n, cl1, cl2, cl3, cl4, "\
-                    "cl5, cl6, (ttt/10) as TTT, twtw, (tdtd/10) as TDTD, rh, (qfe/10) as QFE, (qff/10) as QFF, qnh, txtx, rrr, tot_rrr "\
+                    "cl5, cl6, (ttt/10) as TTT, twtw, (tdtd/10) as TDTD, rh, (qfe/10) as QFE, (qff/10) as QFF, (qnh/10) as QNH, txtx, rrr, tot_rrr "\
                     "FROM COMP_IDEX4 ) WHERE datetime "+_oraQueryFilter+ " "\
                     "ORDER BY datetime"
 
-        #print("Oracle Query :", _oraQuery)
+        print("______________________________________________Oracle Query :", _oraQuery)
         #return;
         cursor.execute(_oraQuery)
         originDF = cursor.fetchall()
@@ -2613,7 +3288,7 @@ if __name__ == "__main__":
                         "GGGG), 'YYYY-MM-DD HH24MISS'), 'YYYY-MM-DD HH24:MI:SS') AS DATETIME "
                         "FROM COMP_IDEX4)")
         lastest_actual_entry_date_time = cursor.fetchall()[0][0]
-        print('lastest_actual_entry_date_time_______',lastest_actual_entry_date_time)
+
         cursor.execute("select count(*) from CDH_PAE_6HR")
         pae_rows = cursor.fetchall()[0][0]
 

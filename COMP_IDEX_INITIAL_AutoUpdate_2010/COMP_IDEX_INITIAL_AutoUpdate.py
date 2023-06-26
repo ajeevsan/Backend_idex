@@ -58,13 +58,13 @@ def put_timely_data():
             user=db_user, password=db_password, dsn=dsn, encoding=db_encoding)
         cursor = connection.cursor()
 
-        _oraQuery = "INSERT INTO COMP_IDEX4 SELECT * FROM COMP_IDEX4_2010_2022 "\
+        _oraQuery = "INSERT INTO COMP_IDEX4 SELECT * FROM COMP_IDEX4_2018_2022 "\
                     "WHERE TO_CHAR(TO_DATE((year || '-' || month || '-' || dd || ' ' || GGGG ||'00'), "\
                     "'YYYY-MM-DD HH24MISS'),  'YYYY-MM-DD HH24:MI:SS') = "\
                     "(SELECT MIN(DATETIME) AS LATEST_INITIAL_REC FROM( "\
                     "SELECT TO_CHAR(TO_DATE((YEAR || '-' || MONTH || '-' || DD || ' ' || "\
                     "GGGG), 'YYYY-MM-DD HH24MISS'), 'YYYY-MM-DD HH24:MI:SS') AS DATETIME "\
-                    "FROM COMP_IDEX4_2010_2022 WHERE TO_CHAR(TO_DATE((YEAR || '-' || MONTH || '-' || DD || ' ' || "\
+                    "FROM COMP_IDEX4_2018_2022 WHERE TO_CHAR(TO_DATE((YEAR || '-' || MONTH || '-' || DD || ' ' || "\
                     "GGGG), 'YYYY-MM-DD HH24MISS'), 'YYYY-MM-DD HH24:MI:SS') > "\
                     "(SELECT MAX(MAXDATETIME) AS LAST_COMPIDEX FROM( "\
                     "SELECT TO_CHAR(TO_DATE((YEAR || '-' || MONTH || '-' || DD || ' ' || "\
@@ -94,7 +94,7 @@ def put_timely_data():
 
 if __name__ == "__main__":
     try:
-        rt1 = RepeatedTimer(40, put_timely_data)
+        rt1 = RepeatedTimer(1, put_timely_data)
     except Exception as ex:
         print("Error occured in function main ", ex)
         print("Complete Error =  ", str(logging.traceback.format_exc()))    

@@ -35,20 +35,20 @@ class Clean_data:
             if df['DATETIME'].dtypes == 'datetime64[ns]':
                 print(f'DATETIME datatype is ok ')
             print(f'null value check for all main features')
-            main_features = [ 'T', 'DDD', 'FF', 'VV',  'N', 'TTT','TWTW', 'TDTD', 'RH', 'QFE', 'QFF',  'TXTX' ]    
+            main_features = [ 'T', 'DDD', 'FF', 'VV',  'N', 'TTT','TWTW', 'TDTD', 'RH', 'QFE', 'QFF', 'QNH','WW', 'TXTX' ]    
             for i in main_features:
                 if df[i].isna().sum() == df.shape[0]:
-                    # print(f'This feature has all null values--------> {i} ')
+                    print(f'This feature has all null values--------> {i} ')
                     df.loc[:, i] = df[i].fillna(4)
-                    # print(f'This feature null values filled')            
+                    print(f'This feature null values filled')            
             
             
             #access datafrom as parameter
             print(f'1. access datafrom *****************************************************************')
             #dataframe
-            # print(f"size {df.shape}")
+            print(f"size {df.shape}")
             # duplicated rows
-            # print(f"duplicate rows in dataset {df.duplicated().sum()}")
+            print(f"duplicate rows in dataset {df.duplicated().sum()}")
             #print(f"duplicate rows type {df[df.duplicated()].T.unique()}")
 
             #end result of this code is a new DataFrame with only the unique columns.
@@ -63,10 +63,10 @@ class Clean_data:
             print(f'3. check null values*****************************************************************starts****************************************') 
             nul = pd.DataFrame(np.round((dfc.isna().sum()/dfc.shape[0])*100,3), columns=['null%'])
             n=nul.sort_values(by=['null%'])
-            # print(f'percentage null values {n}')
+            print(f'percentage null values {n}')
 
             #check null values
-            nul = pd.DataFrame(np.round((dfc[['T',  'DDD', 'FF', 'FMFM','VV', 'N','TTT', 'TDTD', 'TWTW', 'RH', 'QFE', 'QFF', 'RRR']].isna().sum()/dfc.shape[0])*100,5), columns=['null%'])
+            nul = pd.DataFrame(np.round((dfc[['T',  'DDD', 'FF', 'FMFM','VV', 'N','TTT', 'TDTD', 'TWTW', 'RH', 'QFE', 'QFF','QNH','WW', 'RRR']].isna().sum()/dfc.shape[0])*100,5), columns=['null%'])
             n=nul.sort_values(by=['null%'])
             # print(f'percentage null values {n}')
 
@@ -81,9 +81,9 @@ class Clean_data:
             # print(f'duplicated type5 entries dropped')
 
             #check null values
-            nul = pd.DataFrame(np.round((dfc[['T', 'DDD', 'FF', 'FMFM','VV', 'N','TTT', 'TDTD', 'TWTW', 'RH', 'QFE', 'QFF',  'RRR']].isna().sum()/dfc.shape[0])*100,5), columns=['null%'])
+            nul = pd.DataFrame(np.round((dfc[['T', 'DDD', 'FF', 'FMFM','VV', 'N','TTT', 'TDTD', 'TWTW', 'RH', 'QFE', 'QFF', 'QNH','WW', 'RRR']].isna().sum()/dfc.shape[0])*100,5), columns=['null%'])
             n=nul.sort_values(by=['null%'])
-            # print(f'percentage null values {n}')
+            print(f'percentage null values {n}')
 
             ## DB
             print(f'4.2 DB interpolation******************************************************************************************************')
@@ -99,9 +99,9 @@ class Clean_data:
             # print(f'null values in DB after imputation {dfc[(dfc.TT.isna())].shape}')
 
             #check null values
-            nul = pd.DataFrame(np.round((dfc[['T',  'DDD', 'FF', 'FMFM','VV', 'N','TTT', 'TDTD', 'TWTW', 'RH', 'QFE', 'QFF',  'RRR']].isna().sum()/dfc.shape[0])*100,5), columns=['null%'])
+            nul = pd.DataFrame(np.round((dfc[['T',  'DDD', 'FF', 'FMFM','VV', 'N','TTT', 'TDTD', 'TWTW', 'RH', 'QFE', 'QFF', 'QNH','WW', 'RRR']].isna().sum()/dfc.shape[0])*100,5), columns=['null%'])
             n=nul.sort_values(by=['null%'])
-            # print(f'percentage null values {n}')
+            print(f'percentage null values {n}')
             ## DP,WB,RH,QFF,QFE,RRR
 
             #DP,WB,RH,QFF,QFE,RRR
@@ -109,16 +109,16 @@ class Clean_data:
             print(f'4.3 DP,WB,QFF,QFE,RRR interpolation************************************************************************************')
 
             # print(f'null imputation for DP,WB,RH,QFF,QFE,RRR starts')                                
-            for i in ['TDTD','TWTW','QFF','QFE']:
+            for i in ['TDTD','TWTW','QFF','QFE','QNH']:
                 # print(f'null values in {i} before imputation {dfc[(dfc[i].isna())].shape}')
                 dfc[i].interpolate(method ='time', limit_direction ='both', inplace=True)
                 # print(f'null values in {i} after imputation {dfc[(dfc[i].isna())].shape}')
 
 
             #check null values
-            nul = pd.DataFrame(np.round((dfc[['T',  'DDD', 'FF', 'FMFM','VV', 'N','TTT', 'TDTD', 'TWTW', 'RH', 'QFE', 'QFF',  'RRR']].isna().sum()/dfc.shape[0])*100,5), columns=['null%'])
+            nul = pd.DataFrame(np.round((dfc[['T',  'DDD', 'FF', 'FMFM','VV', 'N','TTT', 'TDTD', 'TWTW', 'RH', 'QFE', 'QFF', 'QNH','WW', 'RRR']].isna().sum()/dfc.shape[0])*100,5), columns=['null%'])
             n=nul.sort_values(by=['null%'])
-            # print(f'percentage null values {n}')
+            print(f'percentage null values {n}')
 
             ## TXTX
             print(f'4.4 TXTX manupulation***********************************************************************************************')
@@ -130,17 +130,17 @@ class Clean_data:
             start_date_1 = start_date_dt.strftime('%Y-%m-%d 00:00:00')
             start_date1_str = str(start_date1)
 
-            # print(f'start datetime start_date1 of dataset {start_date1_str}')
+            print(f'start datetime start_date1 of dataset {start_date1_str}')
             start_date_2 = start_date1.strftime('%Y-%m-%d 23:59:00')
             start_date_2
-            # print(f'start datetime start_date2 of dataset {start_date_2}')
+            print(f'start datetime start_date2 of dataset {start_date_2}')
 
 
             end_date1 = dfc.index[dfc.shape[0]-1]
             end_date_1 = end_date1.strftime('%Y-%m-%d 00:00:00')
-            # print(f'end datetime end_date1 of dataset {end_date_1}')
+            print(f'end datetime end_date1 of dataset {end_date_1}')
             end_date2 = end_date1.strftime('%Y-%m-%d 23:59:00')
-            # print(f'end datetime end_date2 of dataset {end_date2}')
+            print(f'end datetime end_date2 of dataset {end_date2}')
             end_date2
 
             # print(f'feature extraction from TXTX starts') 
@@ -163,14 +163,14 @@ class Clean_data:
                 k['MAX'].fillna(method="bfill", inplace=True)
             
             
-            # print('new features-----',dfc[['MIN','MAX','TXTX']].head(60))
+            print('new features-----',dfc[['MIN','MAX','TXTX']].head(60))
             dfc.drop('TXTX', axis=1, inplace =True)
-            # print('new features-----',dfc[['MIN','MAX']].head(60))
+            print('new features-----',dfc[['MIN','MAX']].head(60))
             #dfc.drop('TXTX', axis=1, inplace =True)
             #check null values
-            nul = pd.DataFrame(np.round((dfc[['T',  'DDD', 'FF', 'FMFM','VV', 'N','TTT', 'TDTD', 'TWTW', 'RH', 'QFE', 'QFF',  'RRR','MIN','MAX']].isna().sum()/dfc.shape[0])*100,5), columns=['null%'])
+            nul = pd.DataFrame(np.round((dfc[['T',  'DDD', 'FF', 'FMFM','VV', 'N','TTT', 'TDTD', 'TWTW', 'RH', 'QFE', 'QFF','QNH','WW',  'RRR','MIN','MAX']].isna().sum()/dfc.shape[0])*100,5), columns=['null%'])
             n=nul.sort_values(by=['null%'])
-            # print(f'percentage null values {n}')
+            print(f'percentage null values {n}')
 
             print(f'4.5 FMFM manupulation***************************************************************************************************')
 
@@ -184,14 +184,14 @@ class Clean_data:
             bins = [-float('inf'), 11, 21, 33, 47, 63, float('inf')]
             labels = [0, 1, 2, 3, 4, 5]
             dfc['FMFM_bin'] = pd.cut(dfc['FMFM'], bins=bins, labels=labels, include_lowest=True)
-            dfc['FMFM_bin'] = dfc.FMFM.astype('int64')
+            dfc['FMFM_bin'] = dfc.FMFM_bin.astype('int64')
             val_ct =dfc['FMFM_bin'].value_counts()
             # print(f'FMFM_bin value counts {val_ct}')
 
             #check null values
-            nul = pd.DataFrame(np.round((dfc[['T',  'DDD', 'FF', 'FMFM','FMFM_bin','VV', 'N','TTT', 'TDTD', 'TWTW', 'RH', 'QFE', 'QFF', 'RRR','MIN','MAX']].isna().sum()/dfc.shape[0])*100,5), columns=['null%'])
+            nul = pd.DataFrame(np.round((dfc[['T',  'DDD', 'FF', 'FMFM','FMFM_bin','VV', 'N','TTT', 'TDTD', 'TWTW', 'RH', 'QFE', 'QFF', 'QNH','WW','RRR','MIN','MAX']].isna().sum()/dfc.shape[0])*100,5), columns=['null%'])
             n=nul.sort_values(by=['null%'])
-            # print(f'percentage null values {n}')
+            print(f'percentage null values {n}')
 
             #RRR manupulation
             print(f'4.6 RRR mnupulation*************************************************************************************************')
@@ -209,14 +209,14 @@ class Clean_data:
             bins = [-float('inf'), 0.0, 2.4, 7.5, 35.5, 64.4,124.4,float('inf')]
             labels = [0, 1, 2, 3, 4, 5, 6]
             dfc['RRR_bin'] = pd.cut(dfc['RRR'], bins=bins, labels=labels, include_lowest=True)
-            dfc['RRR_bin'] = dfc.RRR.astype('int64')
+            dfc['RRR_bin'] = dfc.RRR_bin.astype('int64')
             val_ct =dfc['RRR_bin'].value_counts()
             # print(f'RRR_bin value counts {val_ct}')
 
             #check null values
-            nul = pd.DataFrame(np.round((dfc[['T',  'DDD', 'FF', 'FMFM','FMFM_bin','VV', 'N','TTT', 'TDTD', 'TWTW', 'RH', 'QFE', 'QFF', 'RRR','RRR_bin','MIN','MAX']].isna().sum()/dfc.shape[0])*100,5), columns=['null%'])
+            nul = pd.DataFrame(np.round((dfc[['T',  'DDD', 'FF', 'FMFM','FMFM_bin','VV', 'N','TTT', 'TDTD', 'TWTW', 'RH', 'QFE', 'QFF','QNH','WW', 'RRR','RRR_bin','MIN','MAX']].isna().sum()/dfc.shape[0])*100,5), columns=['null%'])
             n=nul.sort_values(by=['null%'])
-            # print(f'percentage null values {n}')
+            print(f'percentage null values {n}')
 
             #visibility scaling 
             print(f'4.8 visibility treatment********************************************************************************************')
@@ -227,10 +227,10 @@ class Clean_data:
             
             
             print(f' VV FF RH treatment********************************************************************************************')
-            for i in ['VV', 'FF','RH']:
-                # print(f'null values in {i} before imputation {dfc[(dfc[i].isna())].shape}')
+            for i in ['VV', 'FF','RH','WW']:
+                print(f'null values in {i} before imputation {dfc[(dfc[i].isna())].shape}')
                 dfc[i] = np.round(dfc[i].interpolate(method ='time', limit_direction ='both'))
-                # print(f'null values in {i} after imputation {dfc[(dfc[i].isna())].shape}')            
+                print(f'null values in {i} after imputation {dfc[(dfc[i].isna())].shape}')            
 
             
             
@@ -260,17 +260,17 @@ class Clean_data:
             
             print(f' N T treatment********************************************************************************************')
             for i in ['N','T', 'MIN', 'MAX']:
-                # print(f'null values in {i} before imputation {dfc[(dfc[i].isna())].shape}')
+                print(f'null values in {i} before imputation {dfc[(dfc[i].isna())].shape}')
                 dfc[i].fillna(method="ffill", inplace=True)
                 dfc[i].fillna(method="bfill", inplace=True)
-                # print(f'null values in {i} after imputation {dfc[(dfc[i].isna())].shape}')
+                print(f'null values in {i} after imputation {dfc[(dfc[i].isna())].shape}')
 
             
             
             #check null values
             nul = pd.DataFrame(np.round((dfc.isna().sum()/dfc.shape[0])*100,5), columns=['null%'])
             n=nul.sort_values(by=['null%'])
-            # print(f'percentage null values {n}')
+            print(f'percentage null values {n}')
 
             #### data resampling script (null value imputation & feature extraction) #####
 
@@ -280,10 +280,10 @@ class Clean_data:
             # print(f'5 deleting extra columns {col}')
 
 
-            main_features = ['T',  'DDD', 'FF', 'FMFM', 'VV', 'N',  'TTT', 'TWTW', 'TDTD', 'RH', 'QFE', 'QFF', 'QNH', 'RRR',  'MIN', 'MAX', 'FMFM_bin', 'RRR_bin', 'Wx', 'Wy', 'Max_Wx', 'Max_Wy'] 
+            main_features = ['T',  'DDD', 'FF', 'FMFM', 'VV', 'N',  'TTT', 'TWTW', 'TDTD', 'RH', 'QFE', 'QFF', 'QNH','WW', 'RRR',  'MIN', 'MAX', 'FMFM_bin', 'RRR_bin', 'Wx', 'Wy', 'Max_Wx', 'Max_Wy'] 
             for i in main_features:
                 if dfc[i].isna().sum() == dfc.shape[0]:
-                    # print(f'This feature has all null values--------> {i} ')
+                    print(f'This feature has all null values--------> {i} ')
                     dfc.loc[:, i] = dfc[i].fillna(4)
                     print(f'This feature null values filled')            
             
@@ -336,30 +336,30 @@ class Clean_data:
             def fill_null(af):
 
                 nl = af.isna().sum()
-                # print(f'total null values created due to resampling {nl}')
+                print(f'total null values created due to resampling {nl}')
 
                 print(f'5. null value imputation started**********************************************************************************')
 
-                for i in ['TDTD','TWTW','RH','QFF','QFE','Wx', 'Wy','Max_Wx', 'Max_Wy','TTT','RRR','FMFM']:
-                    # print(f'null values in {i} before imputation {af[(af[i].isna())].shape}')
+                for i in ['TDTD','TWTW','QFF','QFE','QNH','Wx', 'Wy','Max_Wx', 'Max_Wy','TTT','RRR','FMFM','RH']:
+                    print(f'null values in {i} before imputation {af[(af[i].isna())].shape}')
                     af[i].interpolate(method ='time', limit_direction ='both', inplace=True)
-                    # print(f'null values in {i} after imputation {af[(af[i].isna())].shape}')
+                    print(f'null values in {i} after imputation {af[(af[i].isna())].shape}')
 
                 for i in ['FMFM_bin', 'RRR_bin','N','T', 'MAX','MIN']:
-                    # print(f'null values in {i} before imputation {af[(af[i].isna())].shape}')
+                    print(f'null values in {i} before imputation {af[(af[i].isna())].shape}')
                     af[i].fillna(method="ffill", inplace=True)
                     af[i].fillna(method="bfill", inplace=True)
-                    # print(f'null values in {i} after imputation {af[(af[i].isna())].shape}')
+                    print(f'null values in {i} after imputation {af[(af[i].isna())].shape}')
 
 
                 # print(f'null values in DDD before imputation {af[(af.DDD.isna())].shape}')    
                 af['DDD'] = np.clip(np.round(af['DDD'].interpolate(method ='time', limit_direction ='both') / 10) * 10, 0, 360)
-                # print(f'null values in DDD before imputation {af[(af.DDD.isna())].shape}')
+                print(f'null values in DDD before imputation {af[(af.DDD.isna())].shape}')
 
-                for i in ['VV', 'FF','RH']:
-                    # print(f'null values in {i} before imputation {af[(af[i].isna())].shape}')
+                for i in ['VV', 'FF','RH', 'WW']:
+                    print(f'null values in {i} before imputation {af[(af[i].isna())].shape}')
                     af[i] = np.round(af[i].interpolate(method ='time', limit_direction ='both'))
-                    # print(f'null values in {i} after imputation {af[(af[i].isna())].shape}')
+                    print(f'null values in {i} after imputation {af[(af[i].isna())].shape}')
 
 
                 nl = af.isna().sum()
@@ -370,20 +370,20 @@ class Clean_data:
                 #     'MIN', 'MAX', 'FMFM_bin', 'RRR_bin', 'CL1', 'CL2', 'CL3', 'CL4', 'CL5', 'CL6'], axis = 1, inplace  = True)
 
                 print(f'datatype chane of the variables***********************************************************************************')
-                # print(f'dtypes before conversion {af.dtypes}')
-                cat =['DDD','FF','VV','N','T','FMFM_bin', 'RRR_bin','RH','FMFM' ]
+                print(f'dtypes before conversion {af.dtypes}')
+                cat =['DDD','FF','VV','N','T','FMFM_bin', 'RRR_bin','RH','FMFM','WW' ]
                 for i in cat:
                     af[i] = af[i].astype('int')
-                num =['TTT', 'TDTD', 'TWTW', 'QFE', 'QFF', 'MIN', 'MAX', 'Wx', 'Wy','Max_Wx', 'Max_Wy', 'RRR']
+                num =['TTT', 'TDTD', 'TWTW', 'QFE', 'QFF','QNH', 'MIN', 'MAX', 'Wx', 'Wy','Max_Wx', 'Max_Wy', 'RRR']
                 for i in num:
                     af[i] = af[i].astype('float')
-                # print(f'dtypes after conversion {af.dtypes}')
+                print(f'dtypes after conversion {af.dtypes}')
 
                 return af  
             
             if fhr=='48hr':
                 endd = aa.index[-1]
-                # print(f"end datetime of  preproccessed data---------------->{endd}")
+                print(f"end datetime of  preproccessed data---------------->{endd}")
 
 
                 if endd.strftime('%M:%S') == '00:00':
@@ -397,15 +397,15 @@ class Clean_data:
                             print('n')
 
                     endd = aa.index[-1]
-                    # print(f"start datetime of preproccessed data--------------->{startt}")
-                    # print(f"end datetime of  preproccessed data---------------->{endd}")
+                    print(f"start datetime of preproccessed data--------------->{startt}")
+                    print(f"end datetime of  preproccessed data---------------->{endd}")
 
                     datetime_range = pd.date_range(start=startt, end=endd, freq='2H')
-                    # print(datetime_range)
+                    print(datetime_range)
 
                     af = aa.resample('30min').asfreq()
-                    # print(af.tail(2))
-                    # print(f"end datetime of  preproccessed data---------------->{af.index[-1]}")
+                    print(af.tail(2))
+                    print(f"end datetime of  preproccessed data---------------->{af.index[-1]}")
 
                     aff = fill_null(af)
                     filtered_df = aff[aff.index.strftime('%M:%S') == '00:00']
@@ -423,7 +423,7 @@ class Clean_data:
                     filtered_df_2h = filtered_df.loc[filtered_df.index.floor('H').isin(date_range)]
 
                     nl = filtered_df_2h.isna().sum()
-                    # print(f'total null values after imputation {nl}')
+                    print(f'total null values after imputation {nl}')
 
 
                     return filtered_df_2h
@@ -431,7 +431,7 @@ class Clean_data:
 
                 elif endd.strftime('%M:%S') == '30:00':
 
-                    # print('30*************************************************************************************************30')
+                    print('30*************************************************************************************************30')
                     for i in range(aa.shape[0]):
                         if aa.index[i].strftime('%M:%S') == '30:00':
                             startt = aa.index[i]
@@ -441,15 +441,15 @@ class Clean_data:
                             print('n')
 
                     endd = aa.index[-1]
-                    # print(f"start datetime of preproccessed data--------------->{startt}")
-                    # print(f"end datetime of  preproccessed data---------------->{endd}")
+                    print(f"start datetime of preproccessed data--------------->{startt}")
+                    print(f"end datetime of  preproccessed data---------------->{endd}")
 
                     datetime_range = pd.date_range(start=startt, end=endd, freq='2H')
-                    # print(datetime_range)
+                    print(datetime_range)
 
                     af = aa.resample('30min').asfreq()
-                    # print(af.tail(2))
-                    # print(f"end datetime of  preproccessed data---------------->{af.index[-1]}")
+                    print(af.tail(2))
+                    print(f"end datetime of  preproccessed data---------------->{af.index[-1]}")
 
 
                     aff = fill_null(af)         
@@ -467,7 +467,7 @@ class Clean_data:
                     filtered_df_2h = filtered_df.loc[filtered_df.index.floor('H').isin(date_range)]
 
                     nl = filtered_df_2h.isna().sum()
-                    # print(f'total null values after imputation {nl}')
+                    print(f'total null values after imputation {nl}')
 
                     return filtered_df_2h
 
@@ -479,84 +479,19 @@ class Clean_data:
 
                     aff = fill_null(af)
 
-                    return aff                    
+                    return aff 
 
 
             elif fhr=='6hr':
-                
-                endd = aa.index[-1]
-                # print(f"end datetime of  preproccessed data---------------->{endd}")
+                af = dfc.resample('30min').asfreq()
+                # print('successfuly 1H resampled')
+
+                aff = fill_null(af)
+
+                return aff                   
 
 
-                if endd.strftime('%M:%S') == '00:00':
-                    print('00***************************************************************************00')
-                    for i in range(aa.shape[0]):
-                        if aa.index[i].strftime('%M:%S') == '00:00':
-                            startt = aa.index[i]
-                            break
-
-                        else:
-                            print('n')
-
-                    endd = aa.index[-1]
-                    # print(f"start datetime of preproccessed data--------------->{startt}")
-                    # print(f"end datetime of  preproccessed data---------------->{endd}")
-
-                    datetime_range = pd.date_range(start=startt, end=endd, freq='H')
-                    print(datetime_range)
-
-                    af = aa.resample('30min').asfreq()
-                    print(af.tail(2))
-                    # print(f"end datetime of  preproccessed data---------------->{af.index[-1]}")
-
-                    aff = fill_null(af)
-
-                    filtered_df = aff[aff.index.strftime('%M:%S') == '00:00']
-
-                    nl = filtered_df.isna().sum()
-                    # print(f'total null values after imputation {nl}')
-
-                    return filtered_df
-
-
-                elif endd.strftime('%M:%S') == '30:00':
-                    print('30*************************************************************************************************30')
-                    for i in range(aa.shape[0]):
-                        if aa.index[i].strftime('%M:%S') == '30:00':
-                            startt = aa.index[i]
-                            break
-
-                        else:
-                            print('n')
-
-                    endd = aa.index[-1]
-                    # print(f"start datetime of preproccessed data--------------->{startt}")
-                    # print(f"end datetime of  preproccessed data---------------->{endd}")
-
-                    datetime_range = pd.date_range(start=startt, end=endd, freq='H')
-                    # print(datetime_range)
-
-                    af = aa.resample('30min').asfreq()
-                    # print(af.tail(2))
-                    # print(f"end datetime of  preproccessed data---------------->{af.index[-1]}")
-
-
-                    aff = fill_null(af)
-                    filtered_df = aff[aff.index.strftime('%M:%S') == '30:00']
-
-                    nl = filtered_df.isna().sum()
-                    # print(f'total null values after imputation {nl}')
-
-                    return filtered_df
-
-                else:
-                    
-                    af = dfc.resample('1H').asfreq()
-                    # print('successfuly 1H resampled')
-
-                    aff = fill_null(af)
-
-                    return aff
+            
 
 
 
