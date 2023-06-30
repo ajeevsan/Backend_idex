@@ -1090,9 +1090,9 @@ def sendToFrontendhttp(stn, selectedDate, fchr, isPast):
             print('errorActualPAEvalues___insideHttp',errorActualPAEvalues)
             
             #! Finding the mean root mean square error & mean absolute percentage error
-            e_lists = [PredPAEvalues1,PredPAEvalues1,PredPAEvalues2,PredPAEvalues3,PredPAEvalues4,PredPAEvalues5,PredPAEvalues6,PredPAEvalues7,PredPAEvalues8,PredPAEvalues9,PredPAEvalues10,PredPAEvalues11,PredPAEvalues12]
+            e_lists = [PredPAEvalues1,PredPAEvalues2,PredPAEvalues3,PredPAEvalues4,PredPAEvalues5,PredPAEvalues6,PredPAEvalues7,PredPAEvalues8,PredPAEvalues9,PredPAEvalues10,PredPAEvalues11,PredPAEvalues12]
             actual_list = errorActualPAEvalues[3:15]
-            
+            print("elist____",e_lists)
             for i, e_list in enumerate(e_lists):
                 squared_errors = [(actual - pred) ** 2 for actual, pred in zip(actual_list, e_list)]
                 rmse = np.sqrt(np.mean(squared_errors))
@@ -1330,6 +1330,8 @@ def sendToFrontendhttp(stn, selectedDate, fchr, isPast):
         
         #! dataForStatusActual for storing actual values from the database
         dataForStatusActual = []
+        
+        # predValuesForStatus = []
                 
         currColumnIndx=3
 
@@ -1341,9 +1343,11 @@ def sendToFrontendhttp(stn, selectedDate, fchr, isPast):
 
             if PAEvalues[i][-currColumnIndx] != None:
                 PredPAEvalues.append(PAEvalues[i][-currColumnIndx])
+                # predValuesForStatus.append(PAEvalues[i][-currColumnIndx])
             elif PAEvalues[i][-currColumnIndx] == None:
                 currColumnIndx += 2
                 PredPAEvalues.append(PAEvalues[i][-currColumnIndx])
+                # predValuesForStatus.append(PAEvalues[i][-currColumnIndx])
             #PredPAEvalues.append(PAEvalues[i][-3])
             # if fchr == '6hr':
             #     ErrPAEvalues1.append(PAEvalues[i][-2])
@@ -1383,6 +1387,8 @@ def sendToFrontendhttp(stn, selectedDate, fchr, isPast):
             #     ErrPAEvalues22.append(PAEvalues[i][-44])
             #     ErrPAEvalues23.append(PAEvalues[i][-46])
             #     ErrPAEvalues24.append(PAEvalues[i][-48])
+        
+        # print("predValuesForStatus___",predValuesForStatus)
 
         #! Creating list to store the prediction, datetime, pred/actual difference and status
         statusPrediction = []
@@ -1411,7 +1417,7 @@ def sendToFrontendhttp(stn, selectedDate, fchr, isPast):
                     elif PredPAEvalues[i]<1000 and PredPAEvalues[i]>500:
                         statusData.append("Poor")
                     elif PredPAEvalues[i]<500:
-                        statusData.append("Extreamly Poor") 
+                        statusData.append("Very Poor") 
             else:
                 for i in range(7,31):
                     statusDatetime.append(HourPAEvalues[i])
@@ -1423,7 +1429,7 @@ def sendToFrontendhttp(stn, selectedDate, fchr, isPast):
                     elif PredPAEvalues[i]<1000 and PredPAEvalues[i]>500:
                         statusData.append("Poor")
                     elif PredPAEvalues[i]<500:
-                        statusData.append("Extreamly Poor")
+                        statusData.append("Very Poor")
         
         elif len(dataForStatusActual)<7:
             if fchr == '6hr':
@@ -1437,7 +1443,7 @@ def sendToFrontendhttp(stn, selectedDate, fchr, isPast):
                     elif PredPAEvalues[i]<1000 and PredPAEvalues[i]>500:
                         statusData.append("Poor")
                     elif PredPAEvalues[i]<500:
-                        statusData.append("Extreamly Poor") 
+                        statusData.append("Very Poor") 
             else:
                 for i in range(len(statusDatetime)):
                     statusDatetime.append(HourPAEvalues[i])
@@ -1449,9 +1455,10 @@ def sendToFrontendhttp(stn, selectedDate, fchr, isPast):
                     elif PredPAEvalues[i]<1000 and PredPAEvalues[i]>500:
                         statusData.append("Poor")
                     elif PredPAEvalues[i]<500:
-                        statusData.append("Extreamly Poor")
+                        statusData.append("Very Poor")
 
-    
+        print('statusPrediction___',statusPrediction)
+        
         #! Creating an array of station and color such that it'll store the list 
         stn_names = ['CDH','GKP','HND','SNG']
         sng = []
@@ -1463,43 +1470,74 @@ def sendToFrontendhttp(stn, selectedDate, fchr, isPast):
         
         if fchr == "6hr":
             for i in range(len(stn_names)):
-                queryForFetchingData = 'select "pred(t-0.5)" from ' + stn_names[i] + '_PAE_'+fchr + \
-                ' where datetime<=to_timestamp(\''+str(th2) + \
-                '\', \'YYYY-MM-DD HH24-MI-SS\') and datetime >= to_timestamp(\''+str(th3) + \
-                '\', \'YYYY-MM-DD HH24-MI-SS\')  ORDER BY datetime ASC'
-                print('queryForFetchingData_______',queryForFetchingData)
+                # queryForFetchingData = 'select "pred(t-0.5)" from ' + stn_names[i] + '_PAE_'+fchr + \
+                # ' where datetime<=to_timestamp(\''+str(th2) + \
+                # '\', \'YYYY-MM-DD HH24-MI-SS\') and datetime >= to_timestamp(\''+str(th3) + \
+                # '\', \'YYYY-MM-DD HH24-MI-SS\')  ORDER BY datetime ASC'
+                
+                queryForFetchingData = 'select * from ' + stn_names[i] + '_PAE_'+fchr+' where datetime>=to_timestamp(\''+str(
+                    time_RecentPAE)+'\', \'YYYY-MM-DD HH24-MI-SS\') and datetime<=to_timestamp(\''+str(lh2)+'\', \'YYYY-MM-DD HH24-MI-SS\') ORDER BY datetime ASC'
+                print('queryForFetchingData6_______',queryForFetchingData)
                 cursor.execute(queryForFetchingData)
                 allPAEvalues = cursor.fetchall()
                 print('allPAEvalues_of______',allPAEvalues)
-
+                
+                predValuesForStatus = []
+                
+                currColumnIndx=3
+                
+                for j in range(len(PAEvalues)):
+                    if PAEvalues[j][-currColumnIndx] != None:
+                        predValuesForStatus.append(PAEvalues[j][-currColumnIndx])
+                    elif PAEvalues[j][-currColumnIndx] == None:
+                        currColumnIndx += 2
+                        predValuesForStatus.append(PAEvalues[j][-currColumnIndx])
+                print('size of i',i)
                 if stn_names[i] == 'CDH':
-                        cdh = [t[0] for t in allPAEvalues]
+                        cdh = predValuesForStatus[7:19]
                 elif stn_names[i] == 'GKP':
-                        gkp =  [t[0] for t in allPAEvalues]
+                        gkp =  predValuesForStatus[7:19]
                 elif stn_names[i] == 'HND':
-                        hnd= [t[0] for t in allPAEvalues]
+                        hnd= predValuesForStatus[7:19]
                 elif stn_names[i] == 'SNG':
-                        sng= [t[0] for t in allPAEvalues]
+                        sng= predValuesForStatus[7:19]
         
         elif fchr == "48hr":
             for i in range(len(stn_names)):
-                queryForFetchingData = 'select "pred(t-2)" from ' + stn_names[i] + '_PAE_'+fchr + \
-                ' where datetime<=to_timestamp(\''+str(th2) + \
-                '\', \'YYYY-MM-DD HH24-MI-SS\') and datetime >= to_timestamp(\''+str(th3) + \
-                '\', \'YYYY-MM-DD HH24-MI-SS\')  ORDER BY datetime ASC'
-                print('queryForFetchingData_______',queryForFetchingData)
+                # queryForFetchingData = 'select "pred(t-2)" from ' + stn_names[i] + '_PAE_'+fchr + \
+                # ' where datetime<=to_timestamp(\''+str(th2) + \
+                # '\', \'YYYY-MM-DD HH24-MI-SS\') and datetime >= to_timestamp(\''+str(th3) + \
+                # '\', \'YYYY-MM-DD HH24-MI-SS\')  ORDER BY datetime ASC'
+
+                queryForFetchingData = 'select * from ' + stn_names[i] + '_PAE_'+fchr+' where datetime>=to_timestamp(\''+str(
+                    time_RecentPAE)+'\', \'YYYY-MM-DD HH24-MI-SS\') and datetime<=to_timestamp(\''+str(lh2)+'\', \'YYYY-MM-DD HH24-MI-SS\') ORDER BY datetime ASC'
+                
+                print('queryForFetchingData48_______',queryForFetchingData)
                 cursor.execute(queryForFetchingData)
                 allPAEvalues = cursor.fetchall()
                 print('allPAEvalues_of______',allPAEvalues)
 
+                predValuesForStatus = []
+                
+                currColumnIndx=3
+                
+                for j in range(len(PAEvalues)):
+                    if PAEvalues[j][-currColumnIndx] != None:
+                        predValuesForStatus.append(PAEvalues[j][-currColumnIndx])
+                    elif PAEvalues[j][-currColumnIndx] == None:
+                        currColumnIndx += 2
+                        predValuesForStatus.append(PAEvalues[j][-currColumnIndx])
+
                 if stn_names[i] == 'CDH':
-                        cdh = [t[0] for t in allPAEvalues]
+                        cdh = predValuesForStatus[7:31]
                 elif stn_names[i] == 'GKP':
-                        gkp =  [t[0] for t in allPAEvalues]
+                        gkp =  predValuesForStatus[7:31]
                 elif stn_names[i] == 'HND':
-                        hnd= [t[0] for t in allPAEvalues]
+                        hnd= predValuesForStatus[7:31]
                 elif stn_names[i] == 'SNG':
-                        sng= [t[0] for t in allPAEvalues]
+                        sng= predValuesForStatus[7:31]
+                        
+            print("48hr_data___")
                     
         
         allData = {
@@ -2005,7 +2043,9 @@ def sendToFrontend(stn, selectedDate, fchr, isPast):
 
             
             #! Finding the mean root mean square error & mean absolute percentage error
-            e_lists = [PredPAEvalues1,PredPAEvalues1,PredPAEvalues2,PredPAEvalues3,PredPAEvalues4,PredPAEvalues5,PredPAEvalues6,PredPAEvalues7,PredPAEvalues8,PredPAEvalues9,PredPAEvalues10,PredPAEvalues11,PredPAEvalues12]
+            e_lists = [PredPAEvalues1,PredPAEvalues2,PredPAEvalues3,PredPAEvalues4,PredPAEvalues5,PredPAEvalues6,PredPAEvalues7,PredPAEvalues8,PredPAEvalues9,PredPAEvalues10,PredPAEvalues11,PredPAEvalues12]
+
+            print("elist____",e_lists)
             actual_list = errorActualPAEvalues[3:15]
             
             for i, e_list in enumerate(e_lists):
@@ -2245,6 +2285,8 @@ def sendToFrontend(stn, selectedDate, fchr, isPast):
         #! dataForStatusActual for storing actual values from the database
         dataForStatusActual = []
         
+        predValuesForStatus = []
+        
         currColumnIndx = 3
         
         #! Fetching the HoursPAE, PredPAE and ErrPAE 
@@ -2257,9 +2299,11 @@ def sendToFrontend(stn, selectedDate, fchr, isPast):
 
             if PAEvalues[i][-currColumnIndx] != None:
                 PredPAEvalues.append(PAEvalues[i][-currColumnIndx])
+                predValuesForStatus.append(PAEvalues[i][-currColumnIndx])
             elif PAEvalues[i][-currColumnIndx] == None:
                 currColumnIndx += 2
                 PredPAEvalues.append(PAEvalues[i][-currColumnIndx])
+                predValuesForStatus.append(PAEvalues[i][-currColumnIndx])
             #PredPAEvalues.append(PAEvalues[i][-3])
 
             # if fchr == '6hr':
@@ -2302,6 +2346,7 @@ def sendToFrontend(stn, selectedDate, fchr, isPast):
             #     ErrPAEvalues24.append(PAEvalues[i][-48])
                 
             
+        print("predValuesForStatus___",predValuesForStatus)
         
        #! Creating list to store the prediction, datetime, pred/actual difference and status
         statusPrediction = []
@@ -2331,7 +2376,7 @@ def sendToFrontend(stn, selectedDate, fchr, isPast):
                     elif PredPAEvalues[i]<1000 and PredPAEvalues[i]>500:
                         statusData.append("Poor")
                     elif PredPAEvalues[i]<500:
-                        statusData.append("Extreamly Poor") 
+                        statusData.append("Very Poor") 
             else:
                 for i in range(7,31):
                     statusDatetime.append(HourPAEvalues[i])
@@ -2343,7 +2388,7 @@ def sendToFrontend(stn, selectedDate, fchr, isPast):
                     elif PredPAEvalues[i]<1000 and PredPAEvalues[i]>500:
                         statusData.append("Poor")
                     elif PredPAEvalues[i]<500:
-                        statusData.append("Extreamly Poor")
+                        statusData.append("Very Poor")
         
         elif len(dataForStatusActual)<7:
             if fchr == '6hr':
@@ -2357,7 +2402,7 @@ def sendToFrontend(stn, selectedDate, fchr, isPast):
                     elif PredPAEvalues[i]<1000 and PredPAEvalues[i]>500:
                         statusData.append("Poor")
                     elif PredPAEvalues[i]<500:
-                        statusData.append("Extreamly Poor") 
+                        statusData.append("Very Poor") 
             else:
                 for i in range(len(statusDatetime)):
                     statusDatetime.append(HourPAEvalues[i])
@@ -2369,8 +2414,9 @@ def sendToFrontend(stn, selectedDate, fchr, isPast):
                     elif PredPAEvalues[i]<1000 and PredPAEvalues[i]>500:
                         statusData.append("Poor")
                     elif PredPAEvalues[i]<500:
-                        statusData.append("Extreamly Poor")
+                        statusData.append("Very Poor")
 
+        print('statusPrediction___',statusPrediction)
         #! Creating an array of station and color such that it'll store the list 
         stn_names = ['CDH','GKP','HND','SNG']
         sng = []
@@ -2382,44 +2428,76 @@ def sendToFrontend(stn, selectedDate, fchr, isPast):
         
         if fchr == "6hr":
             for i in range(len(stn_names)):
-                queryForFetchingData = 'select "pred(t-0.5)" from ' + stn_names[i] + '_PAE_'+fchr + \
-                ' where datetime<=to_timestamp(\''+str(th2) + \
-                '\', \'YYYY-MM-DD HH24-MI-SS\') and datetime >= to_timestamp(\''+str(th3) + \
-                '\', \'YYYY-MM-DD HH24-MI-SS\')  ORDER BY datetime ASC'
-                print('queryForFetchingData_______',queryForFetchingData)
+                # queryForFetchingData = 'select "pred(t-0.5)" from ' + stn_names[i] + '_PAE_'+fchr + \
+                # ' where datetime<=to_timestamp(\''+str(th2) + \
+                # '\', \'YYYY-MM-DD HH24-MI-SS\') and datetime >= to_timestamp(\''+str(th3) + \
+                # '\', \'YYYY-MM-DD HH24-MI-SS\')  ORDER BY datetime ASC'
+                
+                queryForFetchingData = 'select * from ' + stn_names[i] + '_PAE_'+fchr+' where datetime>=to_timestamp(\''+str(
+                    time_RecentPAE)+'\', \'YYYY-MM-DD HH24-MI-SS\') and datetime<=to_timestamp(\''+str(lh2)+'\', \'YYYY-MM-DD HH24-MI-SS\') ORDER BY datetime ASC'
+                print('queryForFetchingData6_______',queryForFetchingData)
                 cursor.execute(queryForFetchingData)
                 allPAEvalues = cursor.fetchall()
                 print('allPAEvalues_of______',allPAEvalues)
-
+                
+                predValuesForStatus = []
+                
+                currColumnIndx=3
+                
+                for j in range(len(PAEvalues)):
+                    if PAEvalues[j][-currColumnIndx] != None:
+                        predValuesForStatus.append(PAEvalues[j][-currColumnIndx])
+                    elif PAEvalues[j][-currColumnIndx] == None:
+                        currColumnIndx += 2
+                        predValuesForStatus.append(PAEvalues[j][-currColumnIndx])
+                print('size of i',i)
                 if stn_names[i] == 'CDH':
-                        cdh = [t[0] for t in allPAEvalues]
+                        cdh = predValuesForStatus[7:19]
                 elif stn_names[i] == 'GKP':
-                        gkp =  [t[0] for t in allPAEvalues]
+                        gkp =  predValuesForStatus[7:19]
                 elif stn_names[i] == 'HND':
-                        hnd= [t[0] for t in allPAEvalues]
+                        hnd= predValuesForStatus[7:19]
                 elif stn_names[i] == 'SNG':
-                        sng= [t[0] for t in allPAEvalues]
-        
+                        sng= predValuesForStatus[7:19]
+
+            print("6hr_data___")
+            
         elif fchr == "48hr":
             for i in range(len(stn_names)):
-                queryForFetchingData = 'select "pred(t-2)" from ' + stn_names[i] + '_PAE_'+fchr + \
-                ' where datetime<=to_timestamp(\''+str(th2) + \
-                '\', \'YYYY-MM-DD HH24-MI-SS\') and datetime >= to_timestamp(\''+str(th3) + \
-                '\', \'YYYY-MM-DD HH24-MI-SS\')  ORDER BY datetime ASC'
-                print('queryForFetchingData_______',queryForFetchingData)
+                # queryForFetchingData = 'select "pred(t-2)" from ' + stn_names[i] + '_PAE_'+fchr + \
+                # ' where datetime<=to_timestamp(\''+str(th2) + \
+                # '\', \'YYYY-MM-DD HH24-MI-SS\') and datetime >= to_timestamp(\''+str(th3) + \
+                # '\', \'YYYY-MM-DD HH24-MI-SS\')  ORDER BY datetime ASC'
+
+                queryForFetchingData = 'select * from ' + stn_names[i] + '_PAE_'+fchr+' where datetime>=to_timestamp(\''+str(
+                    time_RecentPAE)+'\', \'YYYY-MM-DD HH24-MI-SS\') and datetime<=to_timestamp(\''+str(lh2)+'\', \'YYYY-MM-DD HH24-MI-SS\') ORDER BY datetime ASC'
+                
+                print('queryForFetchingData48_______',queryForFetchingData)
                 cursor.execute(queryForFetchingData)
                 allPAEvalues = cursor.fetchall()
                 print('allPAEvalues_of______',allPAEvalues)
 
+                predValuesForStatus = []
+                
+                currColumnIndx=3
+                
+                for j in range(len(PAEvalues)):
+                    if PAEvalues[j][-currColumnIndx] != None:
+                        predValuesForStatus.append(PAEvalues[j][-currColumnIndx])
+                    elif PAEvalues[j][-currColumnIndx] == None:
+                        currColumnIndx += 2
+                        predValuesForStatus.append(PAEvalues[j][-currColumnIndx])
+
                 if stn_names[i] == 'CDH':
-                        cdh = [t[0] for t in allPAEvalues]
+                        cdh = predValuesForStatus[7:31]
                 elif stn_names[i] == 'GKP':
-                        gkp =  [t[0] for t in allPAEvalues]
+                        gkp =  predValuesForStatus[7:31]
                 elif stn_names[i] == 'HND':
-                        hnd= [t[0] for t in allPAEvalues]
+                        hnd= predValuesForStatus[7:31]
                 elif stn_names[i] == 'SNG':
-                        sng= [t[0] for t in allPAEvalues]
-                    
+                        sng= predValuesForStatus[7:31]
+                        
+            print("48hr_data___")
         
         allData = {
             "cdh": {'data':cdh},
@@ -2611,7 +2689,6 @@ def sendToFrontend(stn, selectedDate, fchr, isPast):
 @app.route('/searchData', methods=['POST'])
 def searchData():
     try :
-
         global start_date
         global end_date
         global is48hr
@@ -2620,12 +2697,6 @@ def searchData():
         avp_Actual = []
         avp_Pred = []
         avp_Err = []
-        
-        
-        
-
-        # stn = "Gorakhpur"
-        # fchr = "48HR"
         
         data = request.data
         start_date = json.loads(data)["dateArray"][0]
@@ -2735,16 +2806,20 @@ def fetchErrorData():
         global end_date
         global is48hr
         
-        avp_DateTime = []
         avp_Pred = []
         avp_Err = []
+        avp_Datetime = []
+        avp_Actual = []
         
-        data = request.data
-        start_date = json.loads(data)["startDate"]
-        end_date = json.loads(data)["endDate"]
-        fchr = json.loads(data)["fchr"]
-        stn = json.loads(data)["stn"]
-        errTableName = json.loads(data)["errTableName"]
+        # print(f"All_data____{data}")
+        # start_date = request["startDate"]
+        start_date = request.json['startData']
+        start_date = start_date[:10]
+        end_date = request.json["endDate"]
+        end_date = end_date[:10]
+        fchr = request.json["fchr"]
+        stn = request.json["stn"]
+        errTableName = request.json["errTableName"]
         
         #! Convert the station name
         if stn == "Gorakhpur":
@@ -2761,25 +2836,47 @@ def fetchErrorData():
             user=db_user, password=db_password, dsn=dsn, encoding=db_encoding)
         cursor = connection.cursor()
         
+        errName = 'error' + '('+errTableName + ')'
+        predName = 'pred' + '('+errTableName + ')'
+        
         #! query to fetch data
-        fetchData = "select " + '"errTableName" '+ "from " + stn + "_PAE_" + fchr
+        # fetchData = f'select "{errName}" errTableName ' + "from " + stn + "_PAE_" + fchr
+        fetchData = f"""select  datetime, "actual(t)","{predName}", abs("actual(t)" - "{predName}") as ERROR from {stn}_PAE_{fchr} where "actual(t)" is not NULL AND TRUNC(datetime) BETWEEN to_timestamp('{start_date}', 'YYYY-MM-DD HH24-MI-SS') AND to_timestamp('{end_date}', 'YYYY-MM-DD HH24-MI-SS') ORDER BY DATETIME"""
 
         print("FetchData____",fetchData)
         cursor.execute(fetchData)
         
         avp_Values = cursor.fetchall()
         
+        #! Calculation for NRMAE and NRMSE
+        
+        
+        sendDict = []
+        
         
         for i in range(len(avp_Values)):
-            avp_DateTime.append(
-                avp_Values[i][0].strftime('%Y-%m-%d %H:%M:%S'))
+            avp_Datetime.append(avp_Values[i][0])
+            avp_Actual.append(avp_Values[i][1])
             avp_Pred.append(avp_Values[i][2])
-            avp_Err.append(abs(avp_Values[i][3]))
+            avp_Err.append(avp_Values[i][3])
             
-        dictAVP = { "datetime": avp_DateTime, "pred": avp_Pred, "error": avp_Err}
-
+            
+        #! Creating an object of the list for the table
+        for i in range(len(avp_Actual)):
+            data = {
+                'datetime':str(avp_Datetime[i]),
+                'actual': avp_Actual[i],
+                'predic': avp_Pred[i],
+                'error': avp_Err[i]
+            }
+            sendDict.append(data)
         
-        return json.dumps({ "dictAllData": dictAVP})
+            
+        dictAVP = {"pred": avp_Pred, "error": avp_Err, "allTableData":sendDict}
+        # dictAVP = str(dictAVP)
+
+        print("All data___",dictAVP)
+        return json.dumps({ 'dictAllData': dictAVP})
         
     except Exception as ex: 
         print('Error_for_Table___',ex)

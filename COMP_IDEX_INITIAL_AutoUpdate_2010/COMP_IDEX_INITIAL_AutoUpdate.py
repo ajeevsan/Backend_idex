@@ -94,7 +94,7 @@ def put_timely_data():
 
 if __name__ == "__main__":
     try:
-        rt1 = RepeatedTimer(1, put_timely_data)
+        rt1 = RepeatedTimer(20, put_timely_data)
     except Exception as ex:
         print("Error occured in function main ", ex)
         print("Complete Error =  ", str(logging.traceback.format_exc()))    
